@@ -7,6 +7,10 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
+if (file_exists('config.php')) {
+    include 'config.php';
+}
+
 // -----
 // Important: read the instructions in README.md or at:
 // https://github.com/piwik/piwik/tree/master/misc/proxy-hide-piwik-url#piwik-proxy-hide-url
@@ -15,14 +19,20 @@
 // Edit the line below, and replace http://your-piwik-domain.example.org/piwik/
 // with your Piwik URL ending with a slash.
 // This URL will never be revealed to visitors or search engines.
-$PIWIK_URL = 'http://your-piwik-domain.example.org/piwik/';
+if (! isset($PIWIK_URL)) {
+    $PIWIK_URL = 'http://your-piwik-domain.example.org/piwik/';
+}
 
 // Edit the line below, and replace xyz by the token_auth for the user "UserTrackingAPI"
 // which you created when you followed instructions above.
-$TOKEN_AUTH = 'xyz';
+if (! isset($TOKEN_AUTH)) {
+    $TOKEN_AUTH = 'xyz';
+}
 
 // Maximum time, in seconds, to wait for the Piwik server to return the 1*1 GIF
-$timeout = 5;
+if (! isset($timeout)) {
+    $timeout = 5;
+}
 
 function sendHeader($header, $replace = true)
 {
