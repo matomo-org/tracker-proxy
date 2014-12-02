@@ -56,8 +56,9 @@ if (empty($_GET)) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
         // strip any trailing data appended to header
         if (false !== ($semicolon = strpos($modifiedSince, ';'))) {
-            $modifiedSince = strtotime(substr($modifiedSince, 0, $semicolon));
+            $modifiedSince = substr($modifiedSince, 0, $semicolon);
         }
+        $modifiedSince = strtotime($modifiedSince);
     }
     // Re-download the piwik.js once a day maximum
     $lastModified = time() - 86400;
