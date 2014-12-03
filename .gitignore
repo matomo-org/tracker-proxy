@@ -1,0 +1,4 @@
+/tests/composer.lock
+/tests/vendor/
+/.vagrant/
+/config.php

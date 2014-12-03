@@ -53,3 +53,20 @@ To run this properly you will need
  9. Done!
     At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL.
     Repeat the steps 6, 7 and 8 for each website you wish to track in Piwik.
+
+## Contributing
+
+If you have found a bug, you are welcome to submit a pull request.
+
+### Running the tests
+
+The tests need a webserver to be pointed to the root of this repository. The simplest way is to just use Vagrant:
+
+```
+$ vagrant up
+$ vagrant ssh
+$ cd /vagrant/tests
+$ vendor/bin/phpunit
+```
+
+Be advised that the tests require at least PHP 5.3 to run, but the proxy itself can run with PHP 5.2.
