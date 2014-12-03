@@ -1,58 +1,87 @@
-## Piwik Proxy Hide URL
-This script allows to track statistics using Piwik, without revealing the
-Piwik Server URL. This is useful for users who track multiple websites
-on the same Piwik server, but don't want to show the Piwik server URL in
-the source code of all tracked websites.
+# Piwik Tracker Proxy
 
-### Requirements
-To run this properly you will need
+This script allows to track websites with Piwik **without revealing the Piwik server URL**.
 
- * Piwik server latest version
- * One or several website(s) to track with this Piwik server, for example http://trackedsite.com
- * The website to track must run on a server with PHP5 support
- * In your php.ini you must check that the following is set: `allow_url_fopen = On`
+This is useful for users who track multiple websites on the same Piwik server, but don't want to show the Piwik server URL in the source code of all tracked websites.
 
-### How to track trackedsite.com in your Piwik without revealing the Piwik server URL?
+## Requirements
 
-1. In your Piwik server, login as Super user
-2. create a user, set the login for example: "UserTrackingAPI"
-3. Assign this user "admin" permission on all websites you wish to track without showing the Piwik URL
-4. Copy the "token_auth" for this user, and paste it below in this file, in `$TOKEN_AUTH = "xyz"`
-5. In this file, below this help test, edit $PIWIK_URL variable and change http://your-piwik-domain.example.org/piwik/ with the URL to your Piwik server.
-6. Upload this modified piwik.php file in the website root directory, for example at: http://trackedsite.com/piwik.php
-   This file (http://trackedsite.com/piwik.php) will be called by the Piwik Javascript,
-   instead of calling directly the (secret) Piwik Server URL (http://your-piwik-domain.example.org/piwik/).
-7. You now need to add the modified Piwik Javascript Code to the footer of your pages at http://trackedsite.com/
-   Go to Piwik > Settings > Websites > Show Javascript Tracking Code.
-   Copy the Javascript snippet. Then, edit this code and change the last lines to the following:
+To run this properly you will need:
 
-   ```
-   [...]
-   (function() {
-       var u="//trackedsite.com/";
-       _paq.push(["setTrackerUrl", u+"piwik.php"]);
-       _paq.push(["setSiteId", "trackedsite-id"]);
-       var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0];
-       g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"piwik.php"; s.parentNode.insertBefore(g,s);
-   })();
-   </script>
-   <!-- End Piwik Code -->
-   ```
+- latest version of Piwik installed on a server
+- one or several website(s) to track with this Piwik, for example http://trackedsite.com
+- the website to track must run on a server with PHP 5.2 or higher
+- your `php.ini` you must contain `allow_url_fopen = On`
 
-   What's changed in this code snippet compared to the normal Piwik code?
+## Installation
 
-   * the (secret) Piwik URL is now replaced by your website URL
-   * the "piwik.js" becomes "piwik.php" because this piwik.php proxy script will also display and proxy the Javascript file
-   * the `<noscript>` part of the code at the end is removed,
-     since it is not currently used by Piwik, and it contains the (secret) Piwik URL which you want to hide.
-   * make sure to replace trackedsite-id with your idsite again.
+### 1. Create a user in Piwik
 
- 8. Paste the modified Piwik Javascript code in your website "trackedsite.com" pages you wish to track.
-    This modified Javascript Code will then track visits/pages/conversions by calling trackedsite.com/piwik.php
-    which will then automatically call your (hidden) Piwik Server URL.
- 9. Done!
-    At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL.
-    Repeat the steps 6, 7 and 8 for each website you wish to track in Piwik.
+In your Piwik server:
+
+- login as Super user
+- create a user, set the login for example: "UserTrackingAPI"
+- assign this user "admin" permission on all websites you wish to track
+- opy the "token_auth" for this user: you will use it later
+
+### 2. Install the proxy
+
+You need to install the proxy on the server where your websites are hosted. You can do it both ways:
+
+- download [`piwik.php`](piwik.php)
+- or install the whole repository with git
+
+#### Manual download of `piwik.php`
+
+- download `piwik.php` to your website root directory, for example at http://trackedsite.com/piwik.php
+- edit the file to set the configuration variables:
+    - `$PIWIK_URL` should contain the URL to your Piwik server
+    - `$TOKEN_AUTH` should contain the `token_auth`
+
+#### With git
+
+- clone the repository: `git clone https://github.com/piwik/tracker-proxy.git piwik` into your website root directory (for example at http://trackedsite.com/piwik/piwik.php)
+- copy the configuration template: `cp config.php.example config.php`
+- change the configuration in the newly created `config.php`:
+    - `$PIWIK_URL` should contain the URL to your Piwik server
+    - `$TOKEN_AUTH` should contain the `token_auth`
+
+By using git you will later be able to update by simply running `git pull`.
+
+### 3. Use the proxy in the Javascript tracker
+
+The proxy file (http://trackedsite.com/piwik.php) will be called by the Piwik Javascript tracker instead of calling directly the (secret) Piwik server (http://your-piwik-domain.example.org/piwik/).
+
+To achieve this, change the Piwik Javascript Code that is in the footer of your pages:
+
+- go to *Piwik > Settings > Websites > Show Javascript Tracking Code*.
+- copy the Javascript snippet and change the last lines to the following:
+
+    ```
+    [...]
+    (function() {
+        var u="//trackedsite.com/";
+        _paq.push(["setTrackerUrl", u+"piwik.php"]);
+        _paq.push(["setSiteId", "trackedsite-id"]);
+        var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0];
+        g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"piwik.php"; s.parentNode.insertBefore(g,s);
+    })();
+    </script>
+    <!-- End Piwik Code -->
+    ```
+
+    What has changed in this code snippet compared to the normal Piwik code?
+
+    - the secret Piwik URL is now replaced by your website URL (the proxy)
+    - `piwik.js` becomes `piwik.php` (or `piwik/piwik.php` if you used the *git* method): piwik.php is the proxy script
+    - the `<noscript>` part of the code at the end is removed, since it is not currently used by Piwik, and it contains the (secret) Piwik URL which you want to hide
+    - make sure to replace `trackedsite-id` with your idsite
+
+- paste the modified Piwik Javascript code in the pages you wish to track.
+
+This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/piwik.php`, which will then automatically call your (hidden) Piwik Server URL.
+
+At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL. Repeat the step 3. for each website you wish to track in Piwik.
 
 ## Contributing
 
@@ -69,4 +98,4 @@ $ cd /vagrant/tests
 $ vendor/bin/phpunit
 ```
 
-Be advised that the tests require at least PHP 5.3 to run, but the proxy itself can run with PHP 5.2.
+Be advised that the tests require at least PHP 5.4 to run, but the proxy itself can run with PHP 5.2.
