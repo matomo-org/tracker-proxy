@@ -28,12 +28,12 @@ In your Piwik server:
 
 You need to install the proxy on the server where your websites are hosted. You can do it both ways:
 
-- download [`piwik.php`](piwik.php)
+- download [`piwik.php`](https://raw.githubusercontent.com/piwik/tracker-proxy/master/piwik.php)
 - or install the whole repository with git
 
 #### Manual download of `piwik.php`
 
-- download `piwik.php` to your website root directory, for example at http://trackedsite.com/piwik.php
+- download [`piwik.php`](https://raw.githubusercontent.com/piwik/tracker-proxy/master/piwik.php) to your website root directory, for example at http://trackedsite.com/piwik.php
 - edit the file to set the configuration variables:
     - `$PIWIK_URL` should contain the URL to your Piwik server
     - `$TOKEN_AUTH` should contain the `token_auth`
@@ -47,6 +47,8 @@ You need to install the proxy on the server where your websites are hosted. You 
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 By using git you will later be able to update by simply running `git pull`.
+
+Be aware that with this method, `piwik.php` is in a `piwik/` subdirectory. Keep that in mind when applying the instructions for the next step.
 
 ### 3. Use the proxy in the Javascript tracker
 
