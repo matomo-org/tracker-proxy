@@ -96,7 +96,15 @@ $stream_options = array('http' => array(
     'timeout'    => $timeout
 ));
 $ctx = stream_context_create($stream_options);
-echo file_get_contents($url, 0, $ctx);
+
+$content = file_get_contents($url, 0, $ctx);
+
+// Forward the HTTP response code
+if (!headers_sent() && isset($http_response_header[0])) {
+    header($http_response_header[0]);
+}
+
+echo $content;
 
 function getVisitIp()
 {
