@@ -1,6 +1,7 @@
 <?php
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 
 class ProxyTest extends PHPUnit_Framework_TestCase
 {
@@ -87,6 +88,26 @@ RESPONSE;
 
         $this->assertEquals($expected, $response->getBody()->getContents());
         $this->assertEquals(204, $response->getStatusCode());
+    }
+
+    /**
+     * @test
+     */
+    public function error_should_forward_error_code()
+    {
+        try {
+            $this->get('status=404');
+            $this->fail('The proxy did not return a 404 response');
+        } catch (RequestException $e) {
+            $this->assertEquals(404, $e->getResponse()->getStatusCode());
+        }
+
+        try {
+            $this->get('status=500');
+            $this->fail('The proxy did not return a 500 response');
+        } catch (RequestException $e) {
+            $this->assertEquals(500, $e->getResponse()->getStatusCode());
+        }
     }
 
     private function get($query = null, DateTime $modifiedSince = null)
