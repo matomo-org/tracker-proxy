@@ -97,14 +97,24 @@ $stream_options = array('http' => array(
 ));
 $ctx = stream_context_create($stream_options);
 
-$content = file_get_contents($url, 0, $ctx);
+if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
-// Forward the HTTP response code
-if (!headers_sent() && isset($http_response_header[0])) {
-    header($http_response_header[0]);
+    // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
+    echo file_get_contents($url . '&send_image=1', 0, $ctx);
+
+} else {
+
+    // PHP 5.3 and above
+    $content = file_get_contents($url, 0, $ctx);
+
+    // Forward the HTTP response code
+    if (!headers_sent() && isset($http_response_header[0])) {
+        header($http_response_header[0]);
+    }
+
+    echo $content;
+
 }
-
-echo $content;
 
 function getVisitIp()
 {
