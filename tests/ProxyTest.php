@@ -78,15 +78,6 @@ RESPONSE;
     {
         $response = $this->get('status=204');
 
-        $expected = <<<RESPONSE
-array (
-  'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
-  'status' => '204',
-)
-RESPONSE;
-
-        $this->assertEquals($expected, $response->getBody()->getContents());
         $this->assertEquals(204, $response->getStatusCode());
     }
 
