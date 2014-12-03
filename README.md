@@ -23,8 +23,8 @@ In your Piwik server:
 
 - login as Super user
 - create a user, set the login for example: "UserTrackingAPI"
-- assign this user "admin" permission on all websites you wish to track
-- opy the "token_auth" for this user: you will use it later
+- assign this user *admin* permission on all websites you wish to track
+- copy the `token_auth` for this user: you will use it later
 
 ### 2. Install the proxy
 
@@ -61,7 +61,7 @@ To achieve this, change the Piwik Javascript Code that is in the footer of your 
 - go to *Piwik > Settings > Websites > Show Javascript Tracking Code*.
 - copy the Javascript snippet and change the last lines to the following:
 
-    ```
+    ```javascript
     [...]
     (function() {
         var u="//trackedsite.com/";
