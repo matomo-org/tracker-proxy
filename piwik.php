@@ -67,7 +67,7 @@ if (empty($_GET)) {
     sendHeader('Vary: Accept-Encoding');
 
     // Returns 304 if not modified since
-    if (!empty($modifiedSince) && $modifiedSince < $lastModified) {
+    if (!empty($modifiedSince) && $modifiedSince > $lastModified) {
         sendHeader(sprintf("%s 304 Not Modified", $_SERVER['SERVER_PROTOCOL']));
     } else {
         sendHeader('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
