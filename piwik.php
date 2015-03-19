@@ -34,6 +34,11 @@ if (! isset($timeout)) {
     $timeout = 5;
 }
 
+// By default, only parameter that would work without token_auth at the real piwik are allowed.
+if (! isset($allow_override_parameter)) {
+	$allow_override_parameter = false;
+}
+
 function sendHeader($header, $replace = true)
 {
     headers_sent() || header($header, $replace);
@@ -86,8 +91,11 @@ if (empty($_GET)) {
 // 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
 $url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $TOKEN_AUTH);
 
+$blacklisted_params = array('cip', 'token_auth', 'cdt', 'country', 'region', 'city', 'lat', 'long');
 foreach ($_GET as $key => $value) {
-    $url .= urlencode($key ). '=' . urlencode($value) . '&';
+	if (!in_array($key, $blacklisted_params) || $allow_override_parameter) {
+    	$url .= urlencode($key ). '=' . urlencode($value) . '&';
+    }
 }
 sendHeader("Content-Type: image/gif");
 $stream_options = array('http' => array(

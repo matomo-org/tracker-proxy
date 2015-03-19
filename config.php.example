@@ -14,5 +14,10 @@ $PIWIK_URL = 'http://your-piwik-domain.example.org/piwik/';
 // which you created when you followed instructions above.
 $TOKEN_AUTH = 'xyz';
 
+// By default, only parameter that would work without token_auth at the real piwik are allowed.
+// See Tracking API for more details:
+// http://developer.piwik.org/api-reference/tracking-api
+$allow_override_parameter = false;
+
 // Maximum time, in seconds, to wait for the Piwik server to return the 1*1 GIF
 $timeout = 5;
