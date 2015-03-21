@@ -89,12 +89,18 @@ if (empty($_GET)) {
 @ini_set('magic_quotes_runtime', 0);
 
 // 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
-$url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $TOKEN_AUTH);
+if ($_GET['token_auth']) {
+    if (empty($_GET['cip']))
+        $_GET['cip'] = getVisitIp();
+    $url = sprintf("%spiwik.php?%s", $PIWIK_URL, http_build_query($_GET));
+} else {
+    $url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $TOKEN_AUTH);
 
-$blacklisted_params = array('cip', 'token_auth', 'cdt', 'country', 'region', 'city', 'lat', 'long');
-foreach ($_GET as $key => $value) {
-    if (!in_array($key, $blacklisted_params) || $allow_override_parameter) {
-        $url .= urlencode($key ). '=' . urlencode($value) . '&';
+    $parametersRequireTokenAuth = array('cip', 'token_auth', 'cdt', 'country', 'region', 'city', 'lat', 'long');
+    foreach ($_GET as $key => $value) {
+        if (!in_array($key, $parametersRequireTokenAuth) || $allow_override_parameter) {
+            $url .= urlencode($key ). '=' . urlencode($value) . '&';
+        }
     }
 }
 sendHeader("Content-Type: image/gif");
