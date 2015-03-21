@@ -89,20 +89,23 @@ if (empty($_GET)) {
 @ini_set('magic_quotes_runtime', 0);
 
 // 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
-if ($_GET['token_auth']) {
+if (empty($_GET['token_auth'])) {
+    // Authenticated request
     if (empty($_GET['cip']))
         $_GET['cip'] = getVisitIp();
-    $url = sprintf("%spiwik.php?%s", $PIWIK_URL, http_build_query($_GET));
 } else {
-    $url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $TOKEN_AUTH);
-
-    $parametersRequireTokenAuth = array('cip', 'token_auth', 'cdt', 'country', 'region', 'city', 'lat', 'long');
-    foreach ($_GET as $key => $value) {
-        if (!in_array($key, $parametersRequireTokenAuth) || $allow_override_parameter) {
-            $url .= urlencode($key ). '=' . urlencode($value) . '&';
+    // Not authenticated by client, use configured admin token
+    $parametersRequireTokenAuth = array('cdt', 'country', 'region', 'city', 'lat', 'long');
+    if (!$allow_override_parameter) {
+        foreach ($parametersRequireTokenAuth as $parameter) {
+            unset($_GET[$parameter]);
         }
     }
+    
+    $_GET['cip'] = getVisitIp();
+    $_GET['token_auth'] = $TOKEN_AUTH;
 }
+$url = sprintf("%spiwik.php?%s", $PIWIK_URL, http_build_query($_GET));
 sendHeader("Content-Type: image/gif");
 $stream_options = array('http' => array(
     'user_agent' => arrayValue($_SERVER, 'HTTP_USER_AGENT', ''),
