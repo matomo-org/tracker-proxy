@@ -93,6 +93,15 @@ If you have found a bug, you are welcome to submit a pull request.
 
 ### Running the tests
 
+Before running the tests, create a config.php file w/ the following contents in the root repository directory:
+
+```
+<?php
+$PIWIK_URL = 'http://localhost/tests/server/';
+$TOKEN_AUTH = 'xyz';
+$timeout = 5;
+```
+
 The tests need a webserver to be pointed to the root of this repository. The simplest way is to just use Vagrant:
 
 ```
