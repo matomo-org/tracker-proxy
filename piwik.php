@@ -34,6 +34,11 @@ if (! isset($timeout)) {
     $timeout = 5;
 }
 
+// User Agent
+if (! isset($user_agent)) {
+    $user_agent = "Piwik Proxy";
+}
+
 function sendHeader($header, $replace = true)
 {
     headers_sent() || header($header, $replace);
@@ -72,7 +77,17 @@ if (empty($_GET)) {
     } else {
         sendHeader('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
-        if ($piwikJs = file_get_contents($PIWIK_URL . 'piwik.js')) {
+		
+		$opts = array(
+			'http'=>array(
+				'method' => "GET",
+				'user_agent' => $user_agent
+		  )
+		);
+		
+		$context = stream_context_create($opts);
+		
+        if ($piwikJs = file_get_contents($PIWIK_URL . 'piwik.js', false, $context)) {
             echo $piwikJs;
         } else {
             sendHeader($_SERVER['SERVER_PROTOCOL'] . '505 Internal server error');
