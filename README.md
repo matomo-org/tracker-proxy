@@ -108,6 +108,7 @@ The tests need a webserver to be pointed to the root of this repository. The sim
 $ vagrant up
 $ vagrant ssh
 $ cd /vagrant/tests
+$ composer install
 $ vendor/bin/phpunit
 ```
 

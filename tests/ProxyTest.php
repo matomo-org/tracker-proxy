@@ -13,7 +13,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
         $response = $this->get();
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('piwik.js', $response->getBody()->getContents());
+        $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
     }
 
@@ -36,7 +36,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
         $response = $this->get(null, $modifiedSince = new DateTime('-25 hours'));
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('piwik.js', $response->getBody()->getContents());
+        $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
         $this->assertNotNull($response->getHeader('Last-Modified'));
     }
@@ -59,6 +59,11 @@ class ProxyTest extends PHPUnit_Framework_TestCase
     {
         $response = $this->get('foo=bar');
 
+        $responseBody = $response->getBody()->getContents();
+
+        // 127.0.0.1 may appear as ::1
+        $responseBody = str_replace('::1', '127.0.0.1', $responseBody);
+
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
@@ -68,7 +73,7 @@ array (
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals($expected, $response->getBody()->getContents());
+        $this->assertEquals($expected, $responseBody);
     }
 
     /**
@@ -114,7 +119,9 @@ RESPONSE;
             $headers['If-Modified-Since'] = $modifiedSince->format(DateTime::RFC850);
         }
 
-        $response = $client->get('http://127.0.0.1/piwik.php' . $query, array(
+        require "../config.php";
+        $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
+        $response = $client->get($PIWIK_URL . '/piwik.php' . $query, array(
             'headers' => $headers,
         ));
 
