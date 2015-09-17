@@ -75,7 +75,8 @@ if (empty($_GET)) {
         if ($piwikJs = file_get_contents($PIWIK_URL . 'piwik.js')) {
             echo $piwikJs;
         } else {
-            sendHeader($_SERVER['SERVER_PROTOCOL'] . '505 Internal server error');
+            // sendHeader($_SERVER['SERVER_PROTOCOL'] . '505 Internal server error');
+            echo '';
         }
     }
     exit;
