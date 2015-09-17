@@ -13,7 +13,7 @@ if (file_exists('config.php')) {
 
 // -----
 // Important: read the instructions in README.md or at:
-// https://github.com/piwik/piwik/tree/master/misc/proxy-hide-piwik-url#piwik-proxy-hide-url
+// https://github.com/piwik/tracker-proxy#piwik-tracker-proxy
 // -----
 
 // Edit the line below, and replace http://your-piwik-domain.example.org/piwik/
