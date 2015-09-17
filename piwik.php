@@ -72,7 +72,9 @@ if (empty($_GET)) {
     } else {
         sendHeader('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
-        if ($piwikJs = file_get_contents($PIWIK_URL . 'piwik.js')) {
+        
+        // Silent fail: hide Warning in 'piwik.js' response
+        if ($piwikJs = @file_get_contents($PIWIK_URL . 'piwik.js')) {
             echo $piwikJs;
         } else {
             // sendHeader($_SERVER['SERVER_PROTOCOL'] . '505 Internal server error');
