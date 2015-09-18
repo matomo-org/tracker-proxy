@@ -106,8 +106,35 @@ RESPONSE;
         }
     }
 
-    private function get($query = null, DateTime $modifiedSince = null)
+    /**
+     * @test
+     */
+    public function get_return_piwikJs_without_error_when_server_down()
     {
+        $piwikUrl = $this->getPiwikUrl();
+
+        // Remove config file -> piwik.php will use the default value 'http://your-piwik-domain.example.org/piwik/'
+        shell_exec("mv ../config.php ../config.php.save");
+        $this->assertTrue(!file_exists('../config.php'));
+
+        $response = $this->get(null, null, $piwikUrl);
+
+        // Restore the config file
+        shell_exec("mv ../config.php.save ../config.php");
+        $this->assertTrue(file_exists('../config.php'));
+
+        $expected = '/* there was an error loading piwik.js */';
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $response->getBody()->getContents());
+
+    }
+
+    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null)
+    {
+        if(is_null($piwikUrl)) {
+            $piwikUrl = $this->getPiwikUrl();
+        }
+
         $client = new Client();
 
         if ($query) {
@@ -119,12 +146,30 @@ RESPONSE;
             $headers['If-Modified-Since'] = $modifiedSince->format(DateTime::RFC850);
         }
 
-        require "../config.php";
-        $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
-        $response = $client->get($PIWIK_URL . '/piwik.php' . $query, array(
+        $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
             'headers' => $headers,
         ));
 
         return $response;
+    }
+
+    private function getPiwikUrl()
+    {
+        $pathConfig = "../config.php";
+        if(!file_exists($pathConfig)) {
+            if(file_exists("../config.php.save")) {
+                throw new Exception("Rename config.php.save to config.php and try again.");
+            }
+
+            throw new Exception("To run tests, create config.php with following content:
+<?php
+\$PIWIK_URL = 'http://localhost/tracker-proxy/tests/server/';
+\$TOKEN_AUTH = 'xyz';
+\$timeout = 5;
+");
+        }
+        require $pathConfig;
+        $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
+        return $PIWIK_URL;
     }
 }
