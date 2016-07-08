@@ -47,8 +47,19 @@ function arrayValue($array, $key, $value = null)
     return $value;
 }
 
-// DO NOT MODIFY BELOW
-// ---------------------------
+
+// -----------------------------
+// DO NOT MODIFY BELOW THIS LINE
+// -----------------------------
+
+// 0) Configure the stream
+$stream_options = array('http' => array(
+    'user_agent' => !empty($user_agent) ? $user_agent : arrayValue($_SERVER, 'HTTP_USER_AGENT', ''),
+    'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
+    'timeout'    => $timeout
+));
+$ctx = stream_context_create($stream_options);
+
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
 if (empty($_GET)) {
     $modifiedSince = false;
@@ -74,7 +85,7 @@ if (empty($_GET)) {
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
         
         // Silent fail: hide Warning in 'piwik.js' response
-        if ($piwikJs = @file_get_contents($PIWIK_URL . 'piwik.js')) {
+        if ($piwikJs = @file_get_contents($PIWIK_URL . 'piwik.js', 0, $ctx)) {
             echo $piwikJs;
         } else {
             echo '/* there was an error loading piwik.js */';
@@ -92,12 +103,6 @@ foreach ($_GET as $key => $value) {
     $url .= urlencode($key ). '=' . urlencode($value) . '&';
 }
 sendHeader("Content-Type: image/gif");
-$stream_options = array('http' => array(
-    'user_agent' => arrayValue($_SERVER, 'HTTP_USER_AGENT', ''),
-    'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
-    'timeout'    => $timeout
-));
-$ctx = stream_context_create($stream_options);
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 

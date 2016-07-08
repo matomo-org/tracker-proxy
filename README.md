@@ -87,6 +87,18 @@ This modified Javascript code will then track visits/pages/conversions by callin
 
 At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL. Repeat the step 3. for each website you wish to track in Piwik.
 
+## Configuration
+
+### Timeout
+
+By default, the `piwik.php` proxy will wait 5 seconds for the Piwik server to return the response. 
+You may change this timeout by editing the `$timeout` value in `config.php`.
+ 
+### User-Agent
+ 
+By default, the `piwik.php` proxy will contact your Piwik server with the User-Agent of the client requesting `piwik.php`. 
+You may force the proxy script to use a particular User-Agent by  editing the `$user_agent` value in `config.php`.
+
 ## Contributing
 
 If you have found a bug, you are welcome to submit a pull request.
