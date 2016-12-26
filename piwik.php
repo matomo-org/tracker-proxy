@@ -88,7 +88,9 @@ foreach ($_GET as $key => $value) {
     $url .= urlencode($key ). '=' . urlencode($value) . '&';
 }
 
-sendHeader("Content-Type: image/gif");
+if(!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
+    sendHeader("Content-Type: image/gif");
+}
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
