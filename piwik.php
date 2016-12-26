@@ -128,18 +128,42 @@ function getVisitIp()
 
 function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
-    // 0) Configure the stream
+    $useCurl = @ini_get('allow_url_fopen') != '1';
+
     $stream_options = array('http' => array(
         'user_agent' => $user_agent,
         'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
         'timeout'    => $timeout
     ));
-    $ctx = stream_context_create($stream_options);
 
-    $content = @file_get_contents($url, 0, $ctx);
+    if($useCurl) {
+        if(!function_exists('curl_init')) {
+            throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
+        }
 
-    if (isset($http_response_header[0])) {
-        $httpStatus = $http_response_header[0];
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, $stream_options['http']['user_agent']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $stream_options['http']['header']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $stream_options['http']['timeout']);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $stream_options['http']['timeout']);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        $content = curl_exec($ch);
+        $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if(!empty($httpStatus)) {
+            $httpStatus = 'HTTP/1.1 ' . $httpStatus;
+        }
+        curl_close($ch);
+
+    } else {
+
+        $ctx = stream_context_create($stream_options);
+        $content = @file_get_contents($url, 0, $ctx);
+
+        if (isset($http_response_header[0])) {
+            $httpStatus = $http_response_header[0];
+        }
     }
     return array($content, $httpStatus);
 
