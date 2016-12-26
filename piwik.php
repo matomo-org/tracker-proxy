@@ -34,31 +34,15 @@ if (! isset($timeout)) {
     $timeout = 5;
 }
 
-function sendHeader($header, $replace = true)
-{
-    headers_sent() || header($header, $replace);
+// Maximum time, in seconds, to wait for the Piwik server to return the 1*1 GIF
+if (empty($user_agent)) {
+    $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
-
-function arrayValue($array, $key, $value = null)
-{
-    if (!empty($array[$key])) {
-        $value = $array[$key];
-    }
-    return $value;
-}
-
 
 // -----------------------------
 // DO NOT MODIFY BELOW THIS LINE
 // -----------------------------
 
-// 0) Configure the stream
-$stream_options = array('http' => array(
-    'user_agent' => !empty($user_agent) ? $user_agent : arrayValue($_SERVER, 'HTTP_USER_AGENT', ''),
-    'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
-    'timeout'    => $timeout
-));
-$ctx = stream_context_create($stream_options);
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
 if (empty($_GET)) {
@@ -85,7 +69,8 @@ if (empty($_GET)) {
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
         
         // Silent fail: hide Warning in 'piwik.js' response
-        if ($piwikJs = @file_get_contents($PIWIK_URL . 'piwik.js', 0, $ctx)) {
+        list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
+        if ($piwikJs = $content) {
             echo $piwikJs;
         } else {
             echo '/* there was an error loading piwik.js */';
@@ -102,21 +87,23 @@ $url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $T
 foreach ($_GET as $key => $value) {
     $url .= urlencode($key ). '=' . urlencode($value) . '&';
 }
+
 sendHeader("Content-Type: image/gif");
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
-    echo file_get_contents($url . '&send_image=1', 0, $ctx);
+    list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
+    echo $content;
 
 } else {
 
     // PHP 5.3 and above
-    $content = file_get_contents($url, 0, $ctx);
+    list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
 
     // Forward the HTTP response code
-    if (!headers_sent() && isset($http_response_header[0])) {
-        header($http_response_header[0]);
+    if (!headers_sent() && !empty($httpStatus)) {
+        header($httpStatus);
     }
 
     echo $content;
@@ -139,3 +126,64 @@ function getVisitIp()
     }
     return arrayValue($_SERVER, 'REMOTE_ADDR');
 }
+
+function getHttpContentAndStatus($url, $timeout, $user_agent)
+{
+    $useFopen = @ini_get('allow_url_fopen') == '1';
+
+    $stream_options = array('http' => array(
+        'user_agent' => $user_agent,
+        'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
+        'timeout'    => $timeout
+    ));
+
+    if($useFopen) {
+        $ctx = stream_context_create($stream_options);
+        $content = @file_get_contents($url, 0, $ctx);
+
+        $httpStatus = '';
+        if (isset($http_response_header[0])) {
+            $httpStatus = $http_response_header[0];
+        }
+
+    } else {
+        if(!function_exists('curl_init')) {
+            throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, $stream_options['http']['user_agent']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $stream_options['http']['header']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $stream_options['http']['timeout']);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $stream_options['http']['timeout']);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        $content = curl_exec($ch);
+        $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if(!empty($httpStatus)) {
+            $httpStatus = 'HTTP/1.1 ' . $httpStatus;
+        }
+        curl_close($ch);
+    }
+
+    return array(
+        $content,
+        $httpStatus
+    );
+
+}
+
+function sendHeader($header, $replace = true)
+{
+    headers_sent() || header($header, $replace);
+}
+
+function arrayValue($array, $key, $value = null)
+{
+    if (!empty($array[$key])) {
+        $value = $array[$key];
+    }
+    return $value;
+}
+

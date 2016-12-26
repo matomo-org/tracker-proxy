@@ -121,7 +121,17 @@ $ vagrant up
 $ vagrant ssh
 $ cd /vagrant/tests
 $ composer install
-$ vendor/bin/phpunit
 ```
+#### Running the tests with CURL wrapper
+
+* Set `allow_url_fopen = Off` in your webserver php.ini
+* Check in phpinfo() that `allow_url_fopen = Off`
+* Run: `vendor/bin/phpunit`
+
+#### Running the tests with Fopen wrapper
+
+* Set `allow_url_fopen = On` in your webserver php.ini
+* Check in phpinfo() that `allow_url_fopen = On`
+* Run: `vendor/bin/phpunit`
 
 Be advised that the tests require at least PHP 5.4 to run, but the proxy itself can run with PHP 5.2.
