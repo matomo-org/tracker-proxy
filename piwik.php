@@ -87,6 +87,7 @@ $url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $T
 foreach ($_GET as $key => $value) {
     $url .= urlencode($key ). '=' . urlencode($value) . '&';
 }
+
 sendHeader("Content-Type: image/gif");
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
@@ -128,7 +129,7 @@ function getVisitIp()
 
 function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
-    $useCurl = @ini_get('allow_url_fopen') != '1';
+    $useFopen = @ini_get('allow_url_fopen') == '1';
 
     $stream_options = array('http' => array(
         'user_agent' => $user_agent,
@@ -136,7 +137,16 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         'timeout'    => $timeout
     ));
 
-    if($useCurl) {
+    if($useFopen) {
+        $ctx = stream_context_create($stream_options);
+        $content = @file_get_contents($url, 0, $ctx);
+
+        $httpStatus = '';
+        if (isset($http_response_header[0])) {
+            $httpStatus = $http_response_header[0];
+        }
+
+    } else {
         if(!function_exists('curl_init')) {
             throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
         }
@@ -155,17 +165,12 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
             $httpStatus = 'HTTP/1.1 ' . $httpStatus;
         }
         curl_close($ch);
-
-    } else {
-
-        $ctx = stream_context_create($stream_options);
-        $content = @file_get_contents($url, 0, $ctx);
-
-        if (isset($http_response_header[0])) {
-            $httpStatus = $http_response_header[0];
-        }
     }
-    return array($content, $httpStatus);
+
+    return array(
+        $content,
+        $httpStatus
+    );
 
 }
 
