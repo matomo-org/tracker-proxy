@@ -34,7 +34,7 @@ if (! isset($timeout)) {
     $timeout = 5;
 }
 
-// Maximum time, in seconds, to wait for the Piwik server to return the 1*1 GIF
+// The HTTP User-Agent to set in the request sent to Piwik Tracking API
 if (empty($user_agent)) {
     $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
