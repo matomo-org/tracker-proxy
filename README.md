@@ -13,7 +13,7 @@ To run this properly you will need:
 - latest version of Piwik installed on a server
 - one or several website(s) to track with this Piwik, for example http://trackedsite.com
 - the website to track must run on a server with PHP 5.2 or higher
-- your `php.ini` you must contain `allow_url_fopen = On`
+- PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
 ## Installation
 
