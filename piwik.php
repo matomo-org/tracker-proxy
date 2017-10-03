@@ -135,7 +135,10 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
     $stream_options = array('http' => array(
         'user_agent' => $user_agent,
-        'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
+        'header'     => array(
+            sprintf("Accept-Language: %s\r\n,", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
+            sprintf("DNT: %d\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_DNT', ''))),
+			),
         'timeout'    => $timeout
     ));
 
