@@ -133,9 +133,20 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
+    $header = sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', '')));
+
+    if((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')) {
+        $header .= "X_DO_NOT_TRACK: 1\r\n";
+    }
+
+    if((isset($_SERVER['HTTP_DNT']) && $_SERVER['HTTP_DNT'] === '1')) {
+        $header .= "DNT: 1\r\n";
+    }
+
+
     $stream_options = array('http' => array(
         'user_agent' => $user_agent,
-        'header'     => sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', ''))),
+        'header'     => $header,
         'timeout'    => $timeout
     ));
 

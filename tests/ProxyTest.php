@@ -129,7 +129,44 @@ RESPONSE;
 
     }
 
-    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null)
+    /**
+     * @test
+     */
+    public function test_without_http_dnt_and_x_do_not_track_header()
+    {
+        $response = $this->get();
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertFalse($response->getHeader('DNT'));
+        $this->assertFalse($response->getHeader('X_DO_NOT_TRACK'));
+    }
+
+    /**
+     * @test
+     */
+    public function test_with_http_dnt_header()
+    {
+        $response = $this->get(null, null, null, array('DNT' => '1'));
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals('1', $response->getHeader('DNT'));
+        $this->assertFalse($response->hasHeader('X_DO_NOT_TRACK'));
+    }
+
+    /**
+     * @test
+     */
+    public function test_with_http_x_do_not_track_header()
+    {
+        $response = $this->get(null, null, null, array('X_DO_NOT_TRACK' => '1'));
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertFalse($response->hasHeader('DNT'));
+        $this->assertEquals('1', $response->getHeader('X_DO_NOT_TRACK'));
+    }
+
+
+    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null)
     {
         if(is_null($piwikUrl)) {
             $piwikUrl = $this->getPiwikUrl();
@@ -144,6 +181,10 @@ RESPONSE;
         $headers = array();
         if ($modifiedSince) {
             $headers['If-Modified-Since'] = $modifiedSince->format(DateTime::RFC850);
+        }
+
+        if($addHeaders) {
+            $headers += $addHeaders;
         }
 
         $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
