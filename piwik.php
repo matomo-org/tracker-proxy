@@ -143,7 +143,6 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $header .= "DNT: 1\r\n";
     }
 
-
     $stream_options = array('http' => array(
         'user_agent' => $user_agent,
         'header'     => $header,
