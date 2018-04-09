@@ -6,6 +6,16 @@ if (isset($_GET['status'])) {
 
 var_export($_GET);
 
+$headers = array();
+foreach (array('DNT', 'X_DO_NOT_TRACK') as $headerName) {
+    if (isset($_SERVER['HTTP_' . $headerName])) {
+        $headers[$headerName] = $_SERVER['HTTP_' . $headerName];
+    }
+}
+if (!empty($headers)) {
+    var_export($headers);
+}
+
 // For PHP 5.3 support
 if (!function_exists('http_response_code')) {
     function http_response_code($code = null) {

@@ -59,10 +59,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
     {
         $response = $this->get('foo=bar');
 
-        $responseBody = $response->getBody()->getContents();
-
-        // 127.0.0.1 may appear as ::1
-        $responseBody = str_replace('::1', '127.0.0.1', $responseBody);
+        $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
@@ -136,7 +133,15 @@ RESPONSE;
     {
         $response = $this->get(null, null, null, array('DNT' => '1'));
 
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+)
+RESPONSE;
+
         $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
     }
 
     /**
@@ -146,7 +151,15 @@ RESPONSE;
     {
         $response = $this->get(null, null, null, array('X_DO_NOT_TRACK' => '1'));
 
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+)
+RESPONSE;
+
         $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
     }
 
 
@@ -196,5 +209,13 @@ RESPONSE;
         require $pathConfig;
         $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
         return $PIWIK_URL;
+    }
+
+    private function getBody($response)
+    {
+        $responseBody = $response->getBody()->getContents();
+
+        // 127.0.0.1 may appear as ::1
+        return str_replace('::1', '127.0.0.1', $responseBody);
     }
 }
