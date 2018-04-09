@@ -132,6 +132,7 @@ RESPONSE;
     /**
      * @test
      */
+    /*
     public function test_without_http_dnt_and_x_do_not_track_header()
     {
         $response = $this->get();
@@ -140,10 +141,12 @@ RESPONSE;
         $this->assertFalse($response->hasHeader('DNT'));
         $this->assertFalse($response->hasHeader('X_DO_NOT_TRACK'));
     }
+    */
 
     /**
      * @test
      */
+    /*
     public function test_with_http_dnt_header()
     {
         $response = $this->get(null, null, null, array('DNT' => '1'));
@@ -152,10 +155,12 @@ RESPONSE;
         $this->assertEquals('1', $response->getHeader('DNT'));
         $this->assertFalse($response->hasHeader('X_DO_NOT_TRACK'));
     }
+    */
 
     /**
      * @test
      */
+    /*
     public function test_with_http_x_do_not_track_header()
     {
         $response = $this->get(null, null, null, array('X_DO_NOT_TRACK' => '1'));
@@ -164,6 +169,7 @@ RESPONSE;
         $this->assertFalse($response->hasHeader('DNT'));
         $this->assertEquals('1', $response->getHeader('X_DO_NOT_TRACK'));
     }
+    */
 
 
     private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null)
