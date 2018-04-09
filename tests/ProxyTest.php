@@ -131,12 +131,18 @@ RESPONSE;
      */
     public function test_with_http_dnt_header()
     {
-        $response = $this->get(null, null, null, array('DNT' => '1'));
+        $response = $this->get('foo=bar', null, null, array('DNT' => '1'));
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
+  'cip' => '127.0.0.1',
+  'token_auth' => 'xyz',
+  'foo' => 'bar',
+)
+array (
+  'DNT' => '1',
 )
 RESPONSE;
 
@@ -149,12 +155,18 @@ RESPONSE;
      */
     public function test_with_http_x_do_not_track_header()
     {
-        $response = $this->get(null, null, null, array('X_DO_NOT_TRACK' => '1'));
+        $response = $this->get('foo=bar', null, null, array('X-Do-Not-Track' => '1'));
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
+  'cip' => '127.0.0.1',
+  'token_auth' => 'xyz',
+  'foo' => 'bar',
+)
+array (
+  'X_DO_NOT_TRACK' => '1',
 )
 RESPONSE;
 

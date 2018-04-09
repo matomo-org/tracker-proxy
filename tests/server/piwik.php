@@ -13,6 +13,7 @@ foreach (array('DNT', 'X_DO_NOT_TRACK') as $headerName) {
     }
 }
 if (!empty($headers)) {
+    echo "\n";
     var_export($headers);
 }
 
