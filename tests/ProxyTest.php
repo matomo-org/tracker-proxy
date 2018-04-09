@@ -137,8 +137,8 @@ RESPONSE;
         $response = $this->get();
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertFalse($response->getHeader('DNT'));
-        $this->assertFalse($response->getHeader('X_DO_NOT_TRACK'));
+        $this->assertFalse($response->hasHeader('DNT'));
+        $this->assertFalse($response->hasHeader('X_DO_NOT_TRACK'));
     }
 
     /**
@@ -184,7 +184,7 @@ RESPONSE;
         }
 
         if($addHeaders) {
-            $headers += $addHeaders;
+            $headers = array_merge($headers, $addHeaders);
         }
 
         $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
