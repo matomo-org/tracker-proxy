@@ -174,14 +174,35 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_plugin_config_php_proxied_correctly()
+    {
+        $response = $this->get('idsite=35&trackerid=123456', null, null, null, '/plugins/HeatmapSessionRecording/config.php');
 
-    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null)
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+in plugins/HeatmapSessionRecording/config.php
+array (
+  'idsite' => '35',
+  'trackerid' => '123456',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null)
     {
         if(is_null($piwikUrl)) {
             $piwikUrl = $this->getPiwikUrl();
         }
 
         $client = new Client();
+
+        if (!$path) {
+            $path = '/piwik.php';
+        }
 
         if ($query) {
             $query = '?' . $query;
@@ -196,7 +217,7 @@ RESPONSE;
             $headers = array_merge($headers, $addHeaders);
         }
 
-        $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
+        $response = $client->get($piwikUrl . $path . $query, array(
             'headers' => $headers,
         ));
 

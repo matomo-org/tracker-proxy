@@ -8,7 +8,7 @@
  */
 
 if (file_exists('config.php')) {
-    include 'config.php';
+    include dirname(__FILE__) . '/config.php';
 }
 
 // -----
@@ -82,7 +82,13 @@ if (empty($_GET)) {
 @ini_set('magic_quotes_runtime', 0);
 
 // 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
-$url = sprintf("%spiwik.php?cip=%s&token_auth=%s&", $PIWIK_URL, getVisitIp(), $TOKEN_AUTH);
+if (!isset($path)) {
+    $path = sprintf("piwik.php?cip=%s&token_auth=%s&", getVisitIp(), $TOKEN_AUTH);
+} else if (strpos($path, '?') === false) {
+    $path = $path . '?';
+}
+
+$url = $PIWIK_URL . $path;
 
 foreach ($_GET as $key => $value) {
     $url .= urlencode($key ). '=' . urlencode($value) . '&';
