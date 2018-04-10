@@ -59,10 +59,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
     {
         $response = $this->get('foo=bar');
 
-        $responseBody = $response->getBody()->getContents();
-
-        // 127.0.0.1 may appear as ::1
-        $responseBody = str_replace('::1', '127.0.0.1', $responseBody);
+        $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
@@ -129,7 +126,56 @@ RESPONSE;
 
     }
 
-    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null)
+    /**
+     * @test
+     */
+    public function test_with_http_dnt_header()
+    {
+        $response = $this->get('foo=bar', null, null, array('DNT' => '1'));
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => 'xyz',
+  'foo' => 'bar',
+)
+array (
+  'DNT' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    /**
+     * @test
+     */
+    public function test_with_http_x_do_not_track_header()
+    {
+        $response = $this->get('foo=bar', null, null, array('X-Do-Not-Track' => '1'));
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => 'xyz',
+  'foo' => 'bar',
+)
+array (
+  'X_DO_NOT_TRACK' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+
+    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null)
     {
         if(is_null($piwikUrl)) {
             $piwikUrl = $this->getPiwikUrl();
@@ -144,6 +190,10 @@ RESPONSE;
         $headers = array();
         if ($modifiedSince) {
             $headers['If-Modified-Since'] = $modifiedSince->format(DateTime::RFC850);
+        }
+
+        if($addHeaders) {
+            $headers = array_merge($headers, $addHeaders);
         }
 
         $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
@@ -171,5 +221,13 @@ RESPONSE;
         require $pathConfig;
         $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
         return $PIWIK_URL;
+    }
+
+    private function getBody($response)
+    {
+        $responseBody = $response->getBody()->getContents();
+
+        // 127.0.0.1 may appear as ::1
+        return str_replace('::1', '127.0.0.1', $responseBody);
     }
 }
