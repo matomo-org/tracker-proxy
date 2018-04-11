@@ -176,12 +176,12 @@ RESPONSE;
 
     public function test_plugin_config_php_proxied_correctly()
     {
-        $response = $this->get('idsite=35&trackerid=123456', null, null, null, '/plugins/HeatmapSessionRecording/config.php');
+        $response = $this->get('idsite=35&trackerid=123456', null, null, null, '/plugins/HeatmapSessionRecording/configs.php');
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
-in plugins/HeatmapSessionRecording/config.php
+in plugins/HeatmapSessionRecording/configs.php
 array (
   'idsite' => '35',
   'trackerid' => '123456',
