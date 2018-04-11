@@ -7,7 +7,7 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-if (file_exists('config.php')) {
+if (file_exists(dirname(__FILE__) . '/config.php')) {
     include dirname(__FILE__) . '/config.php';
 }
 
