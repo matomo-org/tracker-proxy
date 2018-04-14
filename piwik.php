@@ -89,12 +89,10 @@ if (!isset($path)) {
 }
 
 $url = $PIWIK_URL . $path;
+$url .= http_build_query($_GET);
 
-foreach ($_GET as $key => $value) {
-    $url .= urlencode($key ). '=' . urlencode($value) . '&';
-}
-
-if(!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
+$sendImageEnabled = !(defined('DISABLE_SEND_IMAGE') && DISABLE_SEND_IMAGE);
+if ($sendImageEnabled && (!isset($_GET['send_image']) || $_GET['send_image'] == 1)) {
     sendHeader("Content-Type: image/gif");
 }
 
