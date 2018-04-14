@@ -47,7 +47,7 @@ if (empty($user_agent)) {
 $httpResponseHeaders = [];
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
-if (empty($_GET)) {
+if (empty($_GET) && empty($_POST)) {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
@@ -177,6 +177,16 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         'timeout'    => $timeout
     ));
 
+    // if there's POST data, send our proxy request as a POST
+    if (!empty($_POST)) {
+        $postBody = http_build_query($_POST);
+
+        $stream_options['http']['method'] = 'POST';
+        $stream_options['http']['header'] .= "Content-type: application/x-www-form-urlencoded\r\n"
+            . "Content-Length: " . strlen($postBody) . "\r\n";
+        $stream_options['http']['content'] = $postBody;
+    }
+
     if($useFopen) {
         $ctx = stream_context_create($stream_options);
         $content = @file_get_contents($url, 0, $ctx);
@@ -200,6 +210,14 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $stream_options['http']['timeout']);
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADERFUNCTION, 'handleHeaderLine');
+
+        if (!empty($stream_options['http']['method'])
+            && $stream_options['http']['method'] == 'POST'
+        ) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $stream_options['http']['content']);
+        }
+
         $content = curl_exec($ch);
         $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if(!empty($httpStatus)) {

@@ -1,14 +1,18 @@
 <?php
 
-if (isset($_GET['status'])) {
-    http_response_code($_GET['status']);
-}
-
 if (!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
     header('Content-Type: image/gif');
 }
 
+if (isset($_GET['status'])) {
+    http_response_code($_GET['status']);
+}
+
 var_export($_GET);
+if (!empty($_POST)) {
+    echo "\n";
+    var_export($_POST);
+}
 
 $headers = array();
 foreach (array('DNT', 'X_DO_NOT_TRACK') as $headerName) {
