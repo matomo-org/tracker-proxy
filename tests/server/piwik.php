@@ -4,6 +4,10 @@ if (isset($_GET['status'])) {
     http_response_code($_GET['status']);
 }
 
+if (!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
+    header('Content-Type: image/gif');
+}
+
 var_export($_GET);
 
 $headers = array();

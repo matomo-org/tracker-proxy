@@ -43,6 +43,8 @@ if (empty($user_agent)) {
 // DO NOT MODIFY BELOW THIS LINE
 // -----------------------------
 
+// the HTTP response headers captured via fopen or curl
+$httpResponseHeaders = [];
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
 if (empty($_GET)) {
@@ -91,21 +93,19 @@ if (!isset($path)) {
 $url = $PIWIK_URL . $path;
 $url .= http_build_query($_GET);
 
-$sendImageEnabled = !(defined('DISABLE_SEND_IMAGE') && DISABLE_SEND_IMAGE);
-if ($sendImageEnabled && (!isset($_GET['send_image']) || $_GET['send_image'] == 1)) {
-    sendHeader("Content-Type: image/gif");
-}
-
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
+    forwardContentTypeHeader();
+
     echo $content;
 
 } else {
 
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
+    forwardContentTypeHeader();
 
     // Forward the HTTP response code
     if (!headers_sent() && !empty($httpStatus)) {
@@ -114,6 +114,18 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     echo $content;
 
+}
+
+function forwardContentTypeHeader()
+{
+    global $httpResponseHeaders;
+
+    foreach ($httpResponseHeaders as $header) {
+        if (preg_match('/^content-type:/i', $header)) {
+            sendHeader($header);
+            return;
+        }
+    }
 }
 
 function getVisitIp()
@@ -133,8 +145,19 @@ function getVisitIp()
     return arrayValue($_SERVER, 'REMOTE_ADDR');
 }
 
+// captures a header line when using a curl request. would be better to use an anonymous function, but that would break
+// PHP 5.2 support.
+function handleHeaderLine($curl, $headerLine)
+{
+    global $httpResponseHeaders;
+
+    $httpResponseHeaders[] = trim($headerLine);
+}
+
 function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
+    global $httpResponseHeaders;
+
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
     $header = sprintf("Accept-Language: %s\r\n", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', '')));
@@ -161,8 +184,8 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $httpStatus = '';
         if (isset($http_response_header[0])) {
             $httpStatus = $http_response_header[0];
+            $httpResponseHeaders = array_slice($http_response_header, 1);
         }
-
     } else {
         if(!function_exists('curl_init')) {
             throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
@@ -176,6 +199,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         curl_setopt($ch, CURLOPT_TIMEOUT, $stream_options['http']['timeout']);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $stream_options['http']['timeout']);
         curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, 'handleHeaderLine');
         $content = curl_exec($ch);
         $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if(!empty($httpStatus)) {
@@ -186,7 +210,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
     return array(
         $content,
-        $httpStatus
+        $httpStatus,
     );
 
 }
