@@ -69,7 +69,7 @@ if (empty($_GET) && empty($_POST)) {
     } else {
         sendHeader('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
-        
+
         // Silent fail: hide Warning in 'piwik.js' response
         list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
         if ($piwikJs = $content) {
@@ -97,7 +97,7 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
-    forwardContentTypeHeader();
+    forwardHeaders();
 
     echo $content;
 
@@ -105,7 +105,7 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
-    forwardContentTypeHeader();
+    forwardHeaders();
 
     // Forward the HTTP response code
     if (!headers_sent() && !empty($httpStatus)) {
@@ -116,14 +116,27 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
 }
 
-function forwardContentTypeHeader()
+function forwardHeaders()
 {
     global $httpResponseHeaders;
 
+    $headersToForward = [
+        'content-type',
+        'content-length',
+        'access-control-allow-origin',
+        'access-control-allow-methods',
+        'set-cookie',
+    ];
+
     foreach ($httpResponseHeaders as $header) {
-        if (preg_match('/^content-type:/i', $header)) {
+        $parts = explode(':', $header);
+        if (empty($parts[0])) {
+            continue;
+        }
+
+        $name = trim(strtolower($parts[0]));
+        if (in_array($name, $headersToForward)) {
             sendHeader($header);
-            return;
         }
     }
 }
