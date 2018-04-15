@@ -194,7 +194,7 @@ RESPONSE;
 
     public function test_post_requests_are_proxied_correctly()
     {
-        $response = $this->send('foo=bar', null, null, ['content-type: application/x-www-form-urlencoded'], null, 'POST', 'baz=buz');
+        $response = $this->send('foo=bar', null, null, ['content-type' => 'application/x-www-form-urlencoded'], null, 'POST', 'baz=buz');
 
         $responseBody = $this->getBody($response);
 
@@ -236,6 +236,10 @@ RESPONSE;
 
         if($addHeaders) {
             $headers = array_merge($headers, $addHeaders);
+        }
+
+        if (!empty($body)) {
+            $headers['content-length'] = strlen($body);
         }
 
         $request = $client->createRequest($method, $piwikUrl . $path . $query, array(
