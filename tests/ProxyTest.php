@@ -232,7 +232,7 @@ TOKEN_AUTH: <token>
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals(126, $response->getHeader('content-length'));
+        $this->assertEquals(132, $response->getHeader('content-length'));
         $this->assertEquals($expected, $responseBody);
     }
 
