@@ -10,7 +10,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function get_without_parameters_should_forward_piwik_js_content()
     {
-        $response = $this->get();
+        $response = $this->send();
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
@@ -22,7 +22,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function piwik_js_should_not_be_updated_if_less_than_1_day()
     {
-        $response = $this->get(null, $modifiedSince = new DateTime('-23 hours'));
+        $response = $this->send(null, $modifiedSince = new DateTime('-23 hours'));
 
         $this->assertEquals('', $response->getBody()->getContents());
         $this->assertEquals(304, $response->getStatusCode());
@@ -33,7 +33,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function piwik_js_should_be_updated_if_more_than_1_day()
     {
-        $response = $this->get(null, $modifiedSince = new DateTime('-25 hours'));
+        $response = $this->send(null, $modifiedSince = new DateTime('-25 hours'));
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
@@ -46,7 +46,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function get_with_parameters_should_forward_piwik_php()
     {
-        $response = $this->get('foo=bar');
+        $response = $this->send('foo=bar');
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('image/gif', $response->getHeader('Content-Type'));
@@ -57,14 +57,14 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function get_with_parameters_should_forward_query_parameters()
     {
-        $response = $this->get('foo=bar');
+        $response = $this->send('foo=bar');
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 RESPONSE;
@@ -78,7 +78,7 @@ RESPONSE;
      */
     public function get_with_parameters_should_forward_response_code()
     {
-        $response = $this->get('status=204');
+        $response = $this->send('status=204');
 
         $this->assertEquals(204, $response->getStatusCode());
     }
@@ -89,14 +89,14 @@ RESPONSE;
     public function error_should_forward_error_code()
     {
         try {
-            $this->get('status=404');
+            $this->send('status=404');
             $this->fail('The proxy did not return a 404 response');
         } catch (RequestException $e) {
             $this->assertEquals(404, $e->getResponse()->getStatusCode());
         }
 
         try {
-            $this->get('status=500');
+            $this->send('status=500');
             $this->fail('The proxy did not return a 500 response');
         } catch (RequestException $e) {
             $this->assertEquals(500, $e->getResponse()->getStatusCode());
@@ -114,7 +114,7 @@ RESPONSE;
         shell_exec("mv ../config.php ../config.php.save");
         $this->assertTrue(!file_exists('../config.php'));
 
-        $response = $this->get(null, null, $piwikUrl);
+        $response = $this->send(null, null, $piwikUrl);
 
         // Restore the config file
         shell_exec("mv ../config.php.save ../config.php");
@@ -131,14 +131,14 @@ RESPONSE;
      */
     public function test_with_http_dnt_header()
     {
-        $response = $this->get('foo=bar', null, null, array('DNT' => '1'));
+        $response = $this->send('foo=bar', null, null, array('DNT' => '1'));
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
@@ -155,14 +155,14 @@ RESPONSE;
      */
     public function test_with_http_x_do_not_track_header()
     {
-        $response = $this->get('foo=bar', null, null, array('X-Do-Not-Track' => '1'));
+        $response = $this->send('foo=bar', null, null, array('X-Do-Not-Track' => '1'));
 
         $responseBody = $this->getBody($response);
 
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
@@ -174,14 +174,79 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_plugin_config_php_proxied_correctly()
+    {
+        $response = $this->send('idsite=35&trackerid=123456', null, null, null, '/plugins/HeatmapSessionRecording/configs.php');
 
-    private function get($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null)
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+in plugins/HeatmapSessionRecording/configs.php
+array (
+  'idsite' => '35',
+  'trackerid' => '123456',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_post_requests_are_proxied_correctly()
+    {
+        $response = $this->send('foo=bar', null, null, ['content-type' => 'application/x-www-form-urlencoded'], null, 'POST', 'baz=buz');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'baz' => 'buz',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_debug_requests_are_scrubbed_properly()
+    {
+        $response = $this->send('debug=1');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'debug' => '1',
+)
+HOST: proxy
+URL: http://proxy/
+TOKEN_AUTH: <token>
+
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(132, $response->getHeader('content-length'));
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null, $method = 'GET', $body = null)
     {
         if(is_null($piwikUrl)) {
             $piwikUrl = $this->getPiwikUrl();
         }
 
         $client = new Client();
+
+        if (!$path) {
+            $path = '/piwik.php';
+        }
 
         if ($query) {
             $query = '?' . $query;
@@ -196,9 +261,15 @@ RESPONSE;
             $headers = array_merge($headers, $addHeaders);
         }
 
-        $response = $client->get($piwikUrl . '/piwik.php' . $query, array(
+        if (!empty($body)) {
+            $headers['content-length'] = strlen($body);
+        }
+
+        $request = $client->createRequest($method, $piwikUrl . $path . $query, array(
             'headers' => $headers,
+            'body' => $body,
         ));
+        $response = $client->send($request);
 
         return $response;
     }
