@@ -7,6 +7,10 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
+if (!defined('MATOMO_PROXY_FROM_ENDPOINT')) {
+    exit; // this file is not supposed to be accessed directly
+}
+
 if (file_exists(dirname(__FILE__) . '/config.php')) {
     include dirname(__FILE__) . '/config.php';
 }
@@ -105,7 +109,7 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
     $content = sanitizeContent($content);
 
-    forwardHeaders();
+    forwardHeaders($content);
 
     echo $content;
 
@@ -115,7 +119,7 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
     $content = sanitizeContent($content);
 
-    forwardHeaders();
+    forwardHeaders($content);
 
     // Forward the HTTP response code
     if (!headers_sent() && !empty($httpStatus)) {
@@ -140,13 +144,12 @@ function sanitizeContent($content)
     return $content;
 }
 
-function forwardHeaders()
+function forwardHeaders($content)
 {
     global $httpResponseHeaders;
 
     $headersToForward = [
         'content-type',
-        'content-length',
         'access-control-allow-origin',
         'access-control-allow-methods',
         'set-cookie',
@@ -163,6 +166,8 @@ function forwardHeaders()
             sendHeader($header);
         }
     }
+
+    sendHeader('content-length: ' . strlen($content));
 }
 
 function getVisitIp()
