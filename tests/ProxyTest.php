@@ -64,7 +64,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 RESPONSE;
@@ -138,7 +138,7 @@ RESPONSE;
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
@@ -162,7 +162,7 @@ RESPONSE;
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
@@ -201,12 +201,34 @@ RESPONSE;
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => 'xyz',
+  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
   'baz' => 'buz',
 )
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_debug_requests_are_scrubbed_properly()
+    {
+        $response = $this->send('debug=1');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'debug' => '1',
+)
+HOST: proxy
+URL: http://proxy/
+TOKEN_AUTH: <token>
+
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());

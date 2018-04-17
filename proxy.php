@@ -103,6 +103,8 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
+    $content = sanitizeContent($content);
+
     forwardHeaders();
 
     echo $content;
@@ -111,6 +113,8 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
+    $content = sanitizeContent($content);
+
     forwardHeaders();
 
     // Forward the HTTP response code
@@ -119,7 +123,21 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     }
 
     echo $content;
+}
 
+function sanitizeContent($content)
+{
+    global $TOKEN_AUTH;
+    global $PIWIK_URL;
+    global $PROXY_URL;
+
+    $matomoHost = parse_url($PIWIK_URL, PHP_URL_HOST);
+    $proxyHost = parse_url($PROXY_URL, PHP_URL_HOST);
+
+    $content = str_replace($TOKEN_AUTH, '<token>', $content);
+    $content = str_replace($PIWIK_URL, $PROXY_URL, $content);
+    $content = str_replace($matomoHost, $proxyHost, $content);
+    return $content;
 }
 
 function forwardHeaders()

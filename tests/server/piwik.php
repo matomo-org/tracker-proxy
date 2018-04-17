@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../config.php';
+
 if (!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
     header('Content-Type: image/gif');
 }
@@ -23,6 +25,13 @@ foreach (array('DNT', 'X_DO_NOT_TRACK') as $headerName) {
 if (!empty($headers)) {
     echo "\n";
     var_export($headers);
+}
+
+if (!empty($_GET['debug'])) {
+    $host = parse_url($PIWIK_URL, PHP_URL_HOST);
+    echo "\nHOST: $host\n";
+    echo "URL: $PIWIK_URL\n";
+    echo "TOKEN_AUTH: $TOKEN_AUTH\n";
 }
 
 // For PHP 5.3 support
