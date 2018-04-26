@@ -244,7 +244,10 @@ RESPONSE;
 
         $expected = <<<RESPONSE
 in index.php
-
+array (
+  'module' => 'CoreAdminHome',
+  'action' => 'optOut',
+)
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
