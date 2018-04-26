@@ -87,6 +87,13 @@ This modified Javascript code will then track visits/pages/conversions by callin
 
 At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL. Repeat the step 3. for each website you wish to track in Piwik.
 
+### 4. (optional) Use the proxy with Matomo's Opt Out form
+
+The tracker-proxy also supports proxying the matomo opt out form. To use this, change the URL used in the opt out iframe to use
+the tracker proxy's matomo-index.php file.
+
+_Note: you can get the opt out iframe from inside the Privacy Settings page in your Matomo instance._
+
 ## Configuration
 
 ### Timeout
