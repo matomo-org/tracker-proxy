@@ -263,6 +263,33 @@ RESPONSE;
         $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
     }
 
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_blocked_post_requests_are_not_proxied()
+    {
+        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_empty_requests_are_not_proxied()
+    {
+        $this->send('', null, null, null, '/matomo-proxy.php');
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_empty_post_requests_are_not_proxied()
+    {
+        $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
+    }
+
     private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null, $method = 'GET', $body = null)
     {
         if(is_null($piwikUrl)) {
