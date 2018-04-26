@@ -238,7 +238,7 @@ RESPONSE;
 
     public function test_indexphp_requests_are_proxied_correctly()
     {
-        $response = $this->send('module=CoreAdminHome&action=optOut', null, null, null, '/index.php');
+        $response = $this->send('module=CoreAdminHome&action=optOut', null, null, null, '/matomo-index.php');
 
         $responseBody = $this->getBody($response);
 
@@ -257,7 +257,7 @@ RESPONSE;
      */
     public function test_indexphp_blocked_requests_are_not_proxied()
     {
-        $this->send('module=Something&action=else', null, null, null, '/index.php');
+        $this->send('module=Something&action=else', null, null, null, '/matomo-index.php');
     }
 
     private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null, $method = 'GET', $body = null)
