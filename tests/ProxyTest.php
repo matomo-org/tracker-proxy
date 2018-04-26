@@ -236,6 +236,30 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_indexphp_requests_are_proxied_correctly()
+    {
+        $response = $this->send('module=CoreAdminHome&action=optOut', null, null, null, '/index.php');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+in index.php
+
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_blocked_requests_are_not_proxied()
+    {
+        $this->send('module=Something&action=else', null, null, null, '/index.php');
+    }
+
     private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null, $method = 'GET', $body = null)
     {
         if(is_null($piwikUrl)) {
