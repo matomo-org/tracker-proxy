@@ -90,7 +90,7 @@ At this stage, example.com should be tracked by your Piwik without showing the P
 ### 4. (optional) Use the proxy with Matomo's Opt Out form
 
 The tracker-proxy also supports proxying the matomo opt out form. To use this, change the URL used in the opt out iframe to use
-the tracker proxy's matomo-index.php file.
+the tracker proxy's matomo-proxy.php file.
 
 _Note: you can get the opt out iframe from inside the Privacy Settings page in your Matomo instance._
 
