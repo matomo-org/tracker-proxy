@@ -236,7 +236,46 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null, $method = 'GET', $body = null)
+    public function test_proxy_works_with_ipv6()
+    {
+        $response = $this->send('foo=bar', null, null, null, null, 'GET', null, true);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_proxy_works_with_ipv6_in_header()
+    {
+        $headers = ['X-Forwarded-For' => '0:0:0:0:0:ffff:172d:4300'];
+        $response = $this->send('foo=bar', null, null, $headers, null, 'GET',
+            null, true);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0:0:0:0:0:ffff:172d:4300',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null,
+                          $method = 'GET', $body = null, $forceIpV6 = false)
     {
         if(is_null($piwikUrl)) {
             $piwikUrl = $this->getPiwikUrl();
@@ -265,10 +304,18 @@ RESPONSE;
             $headers['content-length'] = strlen($body);
         }
 
-        $request = $client->createRequest($method, $piwikUrl . $path . $query, array(
+        $requestOptions = array(
             'headers' => $headers,
             'body' => $body,
-        ));
+        );
+
+        if ($forceIpV6) {
+            $requestOptions['config'] = [
+                'curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6],
+            ];
+        }
+
+        $request = $client->createRequest($method, $piwikUrl . $path . $query, $requestOptions);
         $response = $client->send($request);
 
         return $response;

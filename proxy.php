@@ -172,7 +172,6 @@ function forwardHeaders($content)
 
 function getVisitIp()
 {
-    $matchIp = '/^([0-9]{1,3}\.){3}[0-9]{1,3}$/';
     $ipKeys = array(
         'HTTP_X_FORWARDED_FOR',
         'HTTP_CLIENT_IP',
@@ -180,7 +179,8 @@ function getVisitIp()
     );
     foreach($ipKeys as $ipKey) {
         if (isset($_SERVER[$ipKey])
-            && preg_match($matchIp, $_SERVER[$ipKey])) {
+            && filter_var($_SERVER[$ipKey], FILTER_VALIDATE_IP) !== false
+        ) {
             return $_SERVER[$ipKey];
         }
     }
