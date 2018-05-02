@@ -11,6 +11,8 @@ if (!defined('MATOMO_PROXY_FROM_ENDPOINT')) {
     exit; // this file is not supposed to be accessed directly
 }
 
+$DEBUG_PROXY = false;
+
 if (file_exists(dirname(__FILE__) . '/config.php')) {
     include dirname(__FILE__) . '/config.php';
 }
@@ -187,20 +189,33 @@ function getVisitIp()
     return arrayValue($_SERVER, 'REMOTE_ADDR');
 }
 
+function transformHeaderLine($headerLine)
+{
+    // if we're not on an https protocol, make sure cookies do not have 'secure;'
+    if (empty($_SERVER['HTTPS']) && preg_match('/^set-cookie:/i', $headerLine)) {
+        $headerLine = str_replace('secure;', '', $headerLine);
+    }
+    return $headerLine;
+}
+
 // captures a header line when using a curl request. would be better to use an anonymous function, but that would break
 // PHP 5.2 support.
 function handleHeaderLine($curl, $headerLine)
 {
     global $httpResponseHeaders;
 
+    $originalByteCount = strlen($headerLine);
+
+    $headerLine = transformHeaderLine($headerLine);
     $httpResponseHeaders[] = trim($headerLine);
 
-    return strlen($headerLine);
+    return $originalByteCount;
 }
 
 function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
     global $httpResponseHeaders;
+    global $DEBUG_PROXY;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -220,13 +235,21 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $header[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
     }
 
-    $stream_options = array('http' => array(
-        'user_agent' => $user_agent,
-        'header'     => $header,
-        'timeout'    => $timeout,
+    $stream_options = array(
+        'http' => array(
+            'user_agent' => $user_agent,
+            'header'     => $header,
+            'timeout'    => $timeout,
+        ),
+    );
 
-        // 'ignore_errors' => true, // uncomment to debug error code responses
-    ));
+    if ($DEBUG_PROXY) {
+        $stream_options['http']['ignore_errors'] = true;
+        $stream_options['ssl'] = array(
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        );
+    }
 
     // if there's POST data, send our proxy request as a POST
     if (!empty($_POST)) {
@@ -241,12 +264,18 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     if($useFopen) {
         $stream_options['http']['header'] = implode("\r\n", $header);
         $ctx = stream_context_create($stream_options);
-        $content = @file_get_contents($url, 0, $ctx);
+
+        if ($DEBUG_PROXY) {
+            $content = file_get_contents($url, 0, $ctx);
+        } else {
+            $content = @file_get_contents($url, 0, $ctx);
+        }
 
         $httpStatus = '';
         if (isset($http_response_header[0])) {
             $httpStatus = $http_response_header[0];
             $httpResponseHeaders = array_slice($http_response_header, 1);
+            $httpResponseHeaders = array_map('transformHeaderLine', $httpResponseHeaders);
         }
     } else {
         if(!function_exists('curl_init')) {
@@ -268,6 +297,14 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         ) {
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $stream_options['http']['content']);
+        }
+
+        if (isset($stream_options['ssl']['verify_peer']) && $stream_options['ssl']['verify_peer'] == false) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        }
+
+        if (isset($stream_options['ssl']['verify_peer_name']) && $stream_options['ssl']['verify_peer'] == false) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         }
 
         $content = curl_exec($ch);
