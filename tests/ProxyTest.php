@@ -281,6 +281,11 @@ RESPONSE;
             $piwikUrl = $this->getPiwikUrl();
         }
 
+        if ($forceIpV6) {
+            // on travis, using an ipv6 ip address causes an error when resolving localhost
+            $piwikUrl = str_replace("localhost", "127.0.0.1", $piwikUrl);
+        }
+
         $client = new Client();
 
         if (!$path) {

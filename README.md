@@ -1,25 +1,25 @@
-# Piwik Tracker Proxy
+# Matomo Tracker Proxy
 
-[![Build Status](https://travis-ci.org/piwik/tracker-proxy.svg?branch=master)](https://travis-ci.org/piwik/tracker-proxy)
+[![Build Status](https://travis-ci.org/matomo-org/tracker-proxy.svg?branch=master)](https://travis-ci.org/matomo-org/tracker-proxy)
 
-This script allows to track websites with Piwik **without revealing the Piwik server URL**.
+This script allows to track websites with Matomo **without revealing the Matomo server URL**.
 
-This is useful for users who track multiple websites on the same Piwik server, but don't want to show the Piwik server URL in the source code of all tracked websites.
+This is useful for users who track multiple websites on the same Matomo server, but don't want to show the Matomo server URL in the source code of all tracked websites.
 
 ## Requirements
 
 To run this properly you will need:
 
-- latest version of Piwik installed on a server
-- one or several website(s) to track with this Piwik, for example http://trackedsite.com
+- latest version of Matomo installed on a server
+- one or several website(s) to track with this Matomo, for example http://trackedsite.com
 - the website to track must run on a server with PHP 5.2 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
 ## Installation
 
-### 1. Create a user in Piwik
+### 1. Create a user in Matomo
 
-In your Piwik server:
+In your Matomo server:
 
 - login as Super user
 - create a user, set the login for example: "UserTrackingAPI"
@@ -30,35 +30,35 @@ In your Piwik server:
 
 You need to install the proxy on the server where your websites are hosted. You can do it both ways:
 
-- download [`piwik.php`](https://raw.githubusercontent.com/piwik/tracker-proxy/master/piwik.php)
+- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php)
 - or install the whole repository with git
 
 #### Manual download of `piwik.php`
 
-- download [`piwik.php`](https://raw.githubusercontent.com/piwik/tracker-proxy/master/piwik.php) to your website root directory, for example at http://trackedsite.com/piwik.php
+- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php) to your website root directory, for example at http://trackedsite.com/piwik.php
 - edit the file to set the configuration variables:
-    - `$PIWIK_URL` should contain the URL to your Piwik server
+    - `$PIWIK_URL` should contain the URL to your Matomo server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 #### With git
 
-- clone the repository: `git clone https://github.com/piwik/tracker-proxy.git piwik` into your website root directory (for example at http://trackedsite.com/piwik/piwik.php)
+- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at http://trackedsite.com/matomo/piwik.php)
 - copy the configuration template: `cp config.php.example config.php`
 - change the configuration in the newly created `config.php`:
-    - `$PIWIK_URL` should contain the URL to your Piwik server
+    - `$PIWIK_URL` should contain the URL to your Matomo server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 By using git you will later be able to update by simply running `git pull`.
 
-Be aware that with this method, `piwik.php` is in a `piwik/` subdirectory. Keep that in mind when applying the instructions for the next step.
+Be aware that with this method, `piwik.php` is in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
 
 ### 3. Use the proxy in the Javascript tracker
 
-The proxy file (http://trackedsite.com/piwik.php) will be called by the Piwik Javascript tracker instead of calling directly the (secret) Piwik server (http://your-piwik-domain.example.org/piwik/).
+The proxy file (http://trackedsite.com/piwik.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
 
-To achieve this, change the Piwik Javascript Code that is in the footer of your pages:
+To achieve this, change the Matomo Javascript Code that is in the footer of your pages:
 
-- go to *Piwik > Settings > Websites > Show Javascript Tracking Code*.
+- go to *Matomo > Settings > Websites > Show Javascript Tracking Code*.
 - copy the Javascript snippet and change the last lines to the following:
 
     ```javascript
@@ -71,32 +71,32 @@ To achieve this, change the Piwik Javascript Code that is in the footer of your 
         g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"piwik.php"; s.parentNode.insertBefore(g,s);
     })();
     </script>
-    <!-- End Piwik Code -->
+    <!-- End Matomo Code -->
     ```
 
-    What has changed in this code snippet compared to the normal Piwik code?
+    What has changed in this code snippet compared to the normal Matomo code?
 
-    - the secret Piwik URL is now replaced by your website URL (the proxy)
-    - `piwik.js` becomes `piwik.php` (or `piwik/piwik.php` if you used the *git* method): piwik.php is the proxy script
-    - the `<noscript>` part of the code at the end is removed, since it is not currently used by Piwik, and it contains the (secret) Piwik URL which you want to hide
+    - the secret Matomo URL is now replaced by your website URL (the proxy)
+    - `piwik.js` becomes `piwik.php` (or `matomo/piwik.php` if you used the *git* method): piwik.php is the proxy script
+    - the `<noscript>` part of the code at the end is removed, since it is not currently used by Matomo, and it contains the (secret) Matomo URL which you want to hide
     - make sure to replace `trackedsite-id` with your idsite
 
-- paste the modified Piwik Javascript code in the pages you wish to track.
+- paste the modified Matomo Javascript code in the pages you wish to track.
 
-This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/piwik.php`, which will then automatically call your (hidden) Piwik Server URL.
+This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/piwik.php`, which will then automatically call your (hidden) Matomo Server URL.
 
-At this stage, example.com should be tracked by your Piwik without showing the Piwik server URL. Repeat the step 3. for each website you wish to track in Piwik.
+At this stage, example.com should be tracked by your Matomo without showing the Matomo server URL. Repeat the step 3. for each website you wish to track in Matomo.
 
 ## Configuration
 
 ### Timeout
 
-By default, the `piwik.php` proxy will wait 5 seconds for the Piwik server to return the response. 
+By default, the `piwik.php` proxy will wait 5 seconds for the Matomo server to return the response. 
 You may change this timeout by editing the `$timeout` value in `config.php`.
  
 ### User-Agent
  
-By default, the `piwik.php` proxy will contact your Piwik server with the User-Agent of the client requesting `piwik.php`. 
+By default, the `piwik.php` proxy will contact your Matomo server with the User-Agent of the client requesting `piwik.php`. 
 You may force the proxy script to use a particular User-Agent by  editing the `$user_agent` value in `config.php`.
 
 ## Contributing
