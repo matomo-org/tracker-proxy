@@ -1,6 +1,6 @@
 <?php
 
-$PIWIK_URL = 'http://localhost/tests/server/';
+$PIWIK_URL = 'http://127.0.0.1/tests/server/';
 
 $PROXY_URL = 'http://proxy/';
 
