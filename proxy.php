@@ -11,7 +11,11 @@ if (!defined('MATOMO_PROXY_FROM_ENDPOINT')) {
     exit; // this file is not supposed to be accessed directly
 }
 
+// if set to true, will print out more information about request errors so said errors can be more easily debugged.
 $DEBUG_PROXY = false;
+
+// set to true if the target matomo server has a ssl certificate that will fail verification, like when testing.
+$NO_VERIFY_SSL = false;
 
 if (file_exists(dirname(__FILE__) . '/config.php')) {
     include dirname(__FILE__) . '/config.php';
@@ -216,6 +220,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 {
     global $httpResponseHeaders;
     global $DEBUG_PROXY;
+    global $NO_VERIFY_SSL;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -245,6 +250,9 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
     if ($DEBUG_PROXY) {
         $stream_options['http']['ignore_errors'] = true;
+    }
+
+    if ($NO_VERIFY_SSL) {
         $stream_options['ssl'] = array(
             'verify_peer' => false,
             'verify_peer_name' => false,
