@@ -1,6 +1,6 @@
 # Matomo Tracker Proxy
 
-[![Build Status](https://travis-ci.org/matomo-ort/tracker-proxy.svg?branch=master)](https://travis-ci.org/matomo-org/tracker-proxy)
+[![Build Status](https://travis-ci.org/matomo-org/tracker-proxy.svg?branch=master)](https://travis-ci.org/matomo-org/tracker-proxy)
 
 This script allows to track websites with Matomo **without revealing the Matomo server URL**.
 
@@ -54,7 +54,7 @@ Be aware that with this method, `piwik.php` is in a `matomo/` subdirectory. Keep
 
 ### 3. Use the proxy in the Javascript tracker
 
-The proxy file (http://trackedsite.com/matomo.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
+The proxy file (http://trackedsite.com/piwik.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
 
 To achieve this, change the Matomo Javascript Code that is in the footer of your pages:
 
