@@ -236,6 +236,24 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_indexphp_requests_are_proxied_correctly()
+    {
+        $response = $this->send('module=CoreAdminHome&action=optOut', null, null, null, '/matomo-proxy.php');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+in index.php
+array (
+  'module' => 'CoreAdminHome',
+  'action' => 'optOut',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
     public function test_proxy_works_with_ipv6()
     {
         $response = $this->send('foo=bar', null, null, null, null, 'GET', null, true);
@@ -252,6 +270,42 @@ RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $responseBody);
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_blocked_requests_are_not_proxied()
+    {
+        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_blocked_post_requests_are_not_proxied()
+    {
+        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_empty_requests_are_not_proxied()
+    {
+        $this->send('', null, null, null, '/matomo-proxy.php');
+    }
+
+    /**
+     * @expectedException GuzzleHttp\Exception\ClientException
+     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     */
+    public function test_indexphp_empty_post_requests_are_not_proxied()
+    {
+        $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
     }
 
     public function test_proxy_works_with_ipv6_in_header()
