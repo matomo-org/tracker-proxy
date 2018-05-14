@@ -2,10 +2,11 @@
 
 define('MATOMO_PROXY_FROM_ENDPOINT', 1);
 
-$path = 'index.php';
+$path = 'index.php?matomoproxy=1&';
 
 $SUPPORTED_METHODS = [
     'CoreAdminHome.optOut',
+    'CoreAdminHome.getOptOutJs',
 ];
 
 $module = isset($_GET['module']) ? $_GET['module'] : null;

@@ -56,8 +56,8 @@ if (empty($user_agent)) {
 // the HTTP response headers captured via fopen or curl
 $httpResponseHeaders = [];
 
-// 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
-if (empty($_GET) && empty($_POST)) {
+// 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or $action==getOptOutJs, we serve the optOut JS file
+if ((empty($_GET) && empty($_POST)) || $action === 'getOptOutJs') {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
@@ -81,7 +81,11 @@ if (empty($_GET) && empty($_POST)) {
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
 
         // Silent fail: hide Warning in 'piwik.js' response
-        list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
+        if (empty($_GET) && empty($_POST)) {
+            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
+        } else { //load optOutJs
+            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'plugins/CoreAdminHome/javascripts/optOut.js', $timeout, $user_agent);
+        }
         if ($piwikJs = $content) {
             echo $piwikJs;
         } else {
