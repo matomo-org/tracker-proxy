@@ -35,7 +35,8 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 #### Manual download of `piwik.php`
 
-- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php) to your website root directory, for example at http://trackedsite.com/piwik.php
+- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
+  to your website root directory, for example at http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
 - edit the file to set the configuration variables:
     - `$PIWIK_URL` should contain the URL to your Matomo server
     - `$TOKEN_AUTH` should contain the `token_auth`
