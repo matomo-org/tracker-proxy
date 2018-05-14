@@ -57,7 +57,7 @@ if (empty($user_agent)) {
 $httpResponseHeaders = [];
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or $action==getOptOutJs, we serve the optOut JS file
-if ((empty($_GET) && empty($_POST)) || $action === 'getOptOutJs') {
+if ((empty($_GET) && empty($_POST)) || (isset($action) && $action === 'getOptOutJs')) {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
