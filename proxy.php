@@ -54,7 +54,7 @@ if (empty($user_agent)) {
 // -----------------------------
 
 // the HTTP response headers captured via fopen or curl
-$httpResponseHeaders = [];
+$httpResponseHeaders = array();
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file
 if (empty($_GET) && empty($_POST)) {
@@ -98,12 +98,12 @@ if (strpos($path, '?') === false) {
     $path = $path . '?';
 }
 
-$extraQueryParams = [];
+$extraQueryParams = array();
 if (strpos($path, 'piwik.php') === 0) {
-    $extraQueryParams = [
+    $extraQueryParams = array(
         'cip' => getVisitIp(),
         'token_auth' => $TOKEN_AUTH,
-    ];
+    );
 }
 
 $url = $PIWIK_URL . $path;
@@ -154,12 +154,12 @@ function forwardHeaders($content)
 {
     global $httpResponseHeaders;
 
-    $headersToForward = [
+    $headersToForward = array(
         'content-type',
         'access-control-allow-origin',
         'access-control-allow-methods',
         'set-cookie',
-    ];
+    );
 
     foreach ($httpResponseHeaders as $header) {
         $parts = explode(':', $header);
@@ -224,7 +224,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
-    $header = [];
+    $header = array();
     $header[] = sprintf("Accept-Language: %s", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', '')));
 
     // NOTE: any changes made to Piwik\Plugins\PrivacyManager\DoNotTrackHeaderChecker must be made here as well
@@ -342,4 +342,3 @@ function arrayValue($array, $key, $value = null)
     }
     return $value;
 }
-
