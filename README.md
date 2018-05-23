@@ -30,12 +30,13 @@ In your Matomo server:
 
 You need to install the proxy on the server where your websites are hosted. You can do it both ways:
 
-- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php)
+- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php), [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
 - or install the whole repository with git
 
 #### Manual download of `piwik.php`
 
-- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php) to your website root directory, for example at http://trackedsite.com/piwik.php
+- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
+  to your website root directory, for example at http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
 - edit the file to set the configuration variables:
     - `$PIWIK_URL` should contain the URL to your Matomo server
     - `$TOKEN_AUTH` should contain the `token_auth`
@@ -50,7 +51,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 By using git you will later be able to update by simply running `git pull`.
 
-Be aware that with this method, `piwik.php` is in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
+Be aware that with this method, `piwik.php` and other files are in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
 
 ### 3. Use the proxy in the Javascript tracker
 
@@ -90,7 +91,7 @@ At this stage, example.com should be tracked by your Matomo without showing the 
 ### 4. (optional) Use the proxy with Matomo's Opt Out form
 
 The tracker-proxy also supports proxying the matomo opt out form. To use this, change the URL used in the opt out iframe to use
-the tracker proxy's matomo-proxy.php file.
+the tracker proxy's `matomo-proxy.php` file.
 
 _Note: you can get the opt out iframe from inside the Administration > Privacy > Users opt-out page in your Matomo instance._
 
