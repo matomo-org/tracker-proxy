@@ -56,8 +56,8 @@ if (empty($user_agent)) {
 // the HTTP response headers captured via fopen or curl
 $httpResponseHeaders = [];
 
-// 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or $action==getOptOutJs, we serve the optOut JS file
-if ((empty($_GET) && empty($_POST)) || (isset($action) && $action === 'getOptOutJs')) {
+// 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or we serve a requested js file
+if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filerequest, -3) !== false && substr($filerequest, -3) === '.js')) {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];
@@ -83,8 +83,8 @@ if ((empty($_GET) && empty($_POST)) || (isset($action) && $action === 'getOptOut
         // Silent fail: hide Warning in 'piwik.js' response
         if (empty($_GET) && empty($_POST)) {
             list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
-        } else { //load optOutJs
-            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'plugins/CoreAdminHome/javascripts/optOut.js', $timeout, $user_agent);
+        } else {
+            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . $filerequest, $timeout, $user_agent);
         }
         if ($piwikJs = $content) {
             echo $piwikJs;
@@ -94,7 +94,6 @@ if ((empty($_GET) && empty($_POST)) || (isset($action) && $action === 'getOptOut
     }
     exit;
 }
-
 @ini_set('magic_quotes_runtime', 0);
 
 // 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
@@ -124,7 +123,6 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     echo $content;
 
 } else {
-
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
     $content = sanitizeContent($content);
@@ -144,6 +142,7 @@ function sanitizeContent($content)
     global $TOKEN_AUTH;
     global $PIWIK_URL;
     global $PROXY_URL;
+    global $VALID_FILES;
 
     $matomoHost = parse_url($PIWIK_URL, PHP_URL_HOST);
     $proxyHost = parse_url($PROXY_URL, PHP_URL_HOST);
@@ -151,6 +150,14 @@ function sanitizeContent($content)
     $content = str_replace($TOKEN_AUTH, '<token>', $content);
     $content = str_replace($PIWIK_URL, $PROXY_URL, $content);
     $content = str_replace($matomoHost, $proxyHost, $content);
+
+    if(isset($VALID_FILES)) {
+        foreach($VALID_FILES as $filepath) {
+            // replace file paths to match the proxy and discard cb
+            $content = preg_replace('^' . $filepath . '(\?cb\=[a-z0-9]*)?^', $PROXY_URL . 'matomo-proxy.php?file=' . $filepath, $content);
+        }
+    }
+
     return $content;
 }
 

@@ -245,7 +245,6 @@ RESPONSE;
         $expected = <<<RESPONSE
 in index.php
 array (
-  'matomoproxy' => '1',
   'module' => 'CoreAdminHome',
   'action' => 'optOut',
 )
@@ -257,7 +256,7 @@ RESPONSE;
 
     public function test_optOutJsphp_requests_are_proxied_correctly()
     {
-        $response = $this->send('module=CoreAdminHome&action=getOptOutJs', null, null, null, '/matomo-proxy.php');
+        $response = $this->send('file=plugins/CoreAdminHome/javascripts/optOut.js', null, null, null, '/matomo-proxy.php');
 
         $responseBody = $this->getBody($response);
         $this->assertEquals(200, $response->getStatusCode());
