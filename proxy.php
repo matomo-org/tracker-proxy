@@ -57,7 +57,7 @@ if (empty($user_agent)) {
 $httpResponseHeaders = [];
 
 // 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or we serve a requested js file
-if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filerequest, -3) !== false && substr($filerequest, -3) === '.js')) {
+if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filerequest, -3) === '.js')) {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
         $modifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'];

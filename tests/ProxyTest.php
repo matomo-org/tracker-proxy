@@ -248,7 +248,10 @@ array (
   'module' => 'CoreAdminHome',
   'action' => 'optOut',
 )
+
 RESPONSE;
+
+        $expected .= '...some html here... <script src="' . $this -> getProxyUrl() . 'matomo-proxy.php?file=plugins/CoreAdminHome/javascripts/optOut.js">...more html here...';
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $responseBody);
@@ -400,6 +403,7 @@ RESPONSE;
             throw new Exception("To run tests, create config.php with following content:
 <?php
 \$PIWIK_URL = 'http://localhost/tracker-proxy/tests/server/';
+\$PROXY_URL = 'http://localhost/tracker-proxy/';
 \$TOKEN_AUTH = 'xyz';
 \$timeout = 5;
 ");
@@ -407,6 +411,26 @@ RESPONSE;
         require $pathConfig;
         $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
         return $PIWIK_URL;
+    }
+
+    private function getProxyUrl()
+    {
+        $pathConfig = "../config.php";
+        if(!file_exists($pathConfig)) {
+            if(file_exists("../config.php.save")) {
+                throw new Exception("Rename config.php.save to config.php and try again.");
+            }
+
+            throw new Exception("To run tests, create config.php with following content:
+<?php
+\$PIWIK_URL = 'http://localhost/tracker-proxy/tests/server/';
+\$PROXY_URL = 'http://localhost/tracker-proxy/';
+\$TOKEN_AUTH = 'xyz';
+\$timeout = 5;
+");
+        }
+        require $pathConfig;
+        return $PROXY_URL;
     }
 
     private function getBody($response)
