@@ -34,6 +34,10 @@ if (!empty($_GET['debug'])) {
     echo "TOKEN_AUTH: $TOKEN_AUTH\n";
 }
 
+if (isset($_GET['module'], $_GET['action']) && $_GET['module'] == 'CoreAdminHome' && $_GET['action'] == 'optOut') {
+    echo "\n" . '...some html here... <script src="plugins/CoreAdminHome/javascripts/optOut.js">...more html here...';
+}
+
 // For PHP 5.3 support
 if (!function_exists('http_response_code')) {
     function http_response_code($code = null) {
