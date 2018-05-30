@@ -47,6 +47,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 - copy the configuration template: `cp config.php.example config.php`
 - change the configuration in the newly created `config.php`:
     - `$PIWIK_URL` should contain the URL to your Matomo server
+    - `$PROXY_URL` should contain the URL to the tracker-proxy server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 By using git you will later be able to update by simply running `git pull`.
