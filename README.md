@@ -39,6 +39,7 @@ You need to install the proxy on the server where your websites are hosted. You 
   to your website root directory, for example at http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
 - edit the file to set the configuration variables:
     - `$PIWIK_URL` should contain the URL to your Matomo server
+    - `$PROXY_URL` should contain the URL to the tracker-proxy server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 #### With git
