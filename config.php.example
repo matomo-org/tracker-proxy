@@ -25,3 +25,17 @@ $timeout = 5;
 // By default, the HTTP User Agent will be set to the user agent of the client requesting piwik.php
 // Edit the line below to force the proxy to always use a specific user agent string.
 $user_agent = '';
+
+// In some situations the backend takes the sending IP address into account
+// which by default is the IP address of the server/service proxy.php is executed from,
+// If $http_forward_header is set, the clients IP address is sent over in the
+// header field with the given name. An empty string means do not send the
+// the header. A common header name is 'X-Forwarded-For'.
+//
+// In order to work the, the http server serving the matomo instance has to be configured
+// to honor the additional header.
+//
+// For the apache http sever see https://httpd.apache.org/docs/2.4/mod/mod_remoteip.html
+// for nginx see https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/
+//
+$http_ip_forward_header = '';
