@@ -232,6 +232,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     global $httpResponseHeaders;
     global $DEBUG_PROXY;
     global $NO_VERIFY_SSL;
+    global $http_ip_forward_header;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -272,16 +273,20 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
     // if there's POST data, send our proxy request as a POST
     if (!empty($_POST)) {
-        $postBody = http_build_query($_POST);
+        $postBody = file_get_contents("php://input");
 
         $stream_options['http']['method'] = 'POST';
         $stream_options['http']['header'][] = "Content-type: application/x-www-form-urlencoded";
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
         $stream_options['http']['content'] = $postBody;
+        
+        if(!empty($http_ip_forward_header)) {
+            $visitIp = getVisitIp();
+            $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
+        }
     }
 
     if($useFopen) {
-        $stream_options['http']['header'] = implode("\r\n", $header);
         $ctx = stream_context_create($stream_options);
 
         if ($DEBUG_PROXY) {
