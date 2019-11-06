@@ -12,7 +12,7 @@ To run this properly you will need:
 
 - latest version of Matomo installed on a server
 - one or several website(s) to track with this Matomo, for example http://trackedsite.com
-- the website to track must run on a server with PHP 5.2 or higher
+- the website to track must run on a server with PHP 5.3 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
 ## Installation
@@ -144,4 +144,4 @@ $ composer install
 * Check in phpinfo() that `allow_url_fopen = On`
 * Run: `vendor/bin/phpunit`
 
-Be advised that the tests require at least PHP 5.4 to run, but the proxy itself can run with PHP 5.2.
+Be advised that the tests require at least PHP 5.4 to run, but the proxy itself can run with PHP 5.3.
