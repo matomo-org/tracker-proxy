@@ -2,4 +2,4 @@
 
 echo "in plugins/HeatmapSessionRecording/configs.php\n";
 
-include dirname(__FILE__) . '/../../piwik.php';
+include __DIR__ . '/../../piwik.php';

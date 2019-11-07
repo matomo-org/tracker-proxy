@@ -11,4 +11,4 @@ define('MATOMO_PROXY_FROM_ENDPOINT', 1);
 
 $path = "piwik.php";
 
-include dirname(__FILE__) . '/proxy.php';
+include __DIR__ . '/proxy.php';
