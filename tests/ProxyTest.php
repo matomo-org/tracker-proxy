@@ -2,8 +2,9 @@
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use PHPUnit\Framework\TestCase;
 
-class ProxyTest extends PHPUnit_Framework_TestCase
+class ProxyTest extends TestCase
 {
     /**
      * @test
@@ -22,7 +23,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function piwik_js_should_not_be_updated_if_less_than_1_day()
     {
-        $response = $this->send(null, $modifiedSince = new DateTime('-23 hours'));
+        $response = $this->send(null, new DateTime('-23 hours'));
 
         $this->assertEquals('', $response->getBody()->getContents());
         $this->assertEquals(304, $response->getStatusCode());
@@ -33,7 +34,7 @@ class ProxyTest extends PHPUnit_Framework_TestCase
      */
     public function piwik_js_should_be_updated_if_more_than_1_day()
     {
-        $response = $this->send(null, $modifiedSince = new DateTime('-25 hours'));
+        $response = $this->send(null, new DateTime('-25 hours'));
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
@@ -111,14 +112,15 @@ RESPONSE;
         $piwikUrl = $this->getPiwikUrl();
 
         // Remove config file -> piwik.php will use the default value 'http://your-piwik-domain.example.org/piwik/'
-        shell_exec("mv ../config.php ../config.php.save");
-        $this->assertTrue(!file_exists('../config.php'));
+        rename(__DIR__ . "/../config.php", __DIR__ . "/../config.php.save");
+
+        $this->assertFileNotExists('../config.php');
 
         $response = $this->send(null, null, $piwikUrl);
 
         // Restore the config file
-        shell_exec("mv ../config.php.save ../config.php");
-        $this->assertTrue(file_exists('../config.php'));
+        rename(__DIR__ . "/../config.php.save", __DIR__ . "/../config.php");
+        $this->assertFileExists('../config.php');
 
         $expected = '/* there was an error loading piwik.js */';
         $this->assertEquals(200, $response->getStatusCode());
@@ -131,7 +133,7 @@ RESPONSE;
      */
     public function test_with_http_dnt_header()
     {
-        $response = $this->send('foo=bar', null, null, array('DNT' => '1'));
+        $response = $this->send('foo=bar', null, null, ['DNT' => '1']);
 
         $responseBody = $this->getBody($response);
 
@@ -155,7 +157,7 @@ RESPONSE;
      */
     public function test_with_http_x_do_not_track_header()
     {
-        $response = $this->send('foo=bar', null, null, array('X-Do-Not-Track' => '1'));
+        $response = $this->send('foo=bar', null, null, ['X-Do-Not-Track' => '1']);
 
         $responseBody = $this->getBody($response);
 
@@ -362,7 +364,7 @@ RESPONSE;
             $query = '?' . $query;
         }
 
-        $headers = array();
+        $headers = [];
         if ($modifiedSince) {
             $headers['If-Modified-Since'] = $modifiedSince->format(DateTime::RFC850);
         }
@@ -375,10 +377,10 @@ RESPONSE;
             $headers['content-length'] = strlen($body);
         }
 
-        $requestOptions = array(
+        $requestOptions = [
             'headers' => $headers,
             'body' => $body,
-        );
+        ];
 
         if ($forceIpV6) {
             $requestOptions['config'] = [

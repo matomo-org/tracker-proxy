@@ -17,8 +17,8 @@ $DEBUG_PROXY = false;
 // set to true if the target matomo server has a ssl certificate that will fail verification, like when testing.
 $NO_VERIFY_SSL = false;
 
-if (file_exists(dirname(__FILE__) . '/config.php')) {
-    include dirname(__FILE__) . '/config.php';
+if (file_exists(__DIR__ . '/config.php')) {
+    include __DIR__ . '/config.php';
 }
 
 // -----
@@ -279,7 +279,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $stream_options['http']['header'][] = "Content-type: application/x-www-form-urlencoded";
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
         $stream_options['http']['content'] = $postBody;
-        
+
         if(!empty($http_ip_forward_header)) {
             $visitIp = getVisitIp();
             $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";

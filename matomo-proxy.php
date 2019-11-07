@@ -33,4 +33,4 @@ if (!(isset($filerequest) && in_array($filerequest, $VALID_FILES))
     exit;
 }
 
-include dirname(__FILE__) . '/proxy.php';
+include __DIR__ . '/proxy.php';
