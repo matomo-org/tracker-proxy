@@ -86,7 +86,12 @@ if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filereque
 
         // Silent fail: hide Warning in 'matomo.js' response
         if (empty($_GET) && empty($_POST)) {
-            list($content, $httpStatus) = getHttpContentAndStatus($MATOMO_URL . 'matomo.js', $timeout, $user_agent);
+            if ($path !== 'matomo.php') {
+                $jsPath = 'piwik.js'; // for BC eg in case user uses an older version of Matomo
+            } else {
+                $jsPath = 'matomo.js';
+            }
+            list($content, $httpStatus) = getHttpContentAndStatus($MATOMO_URL . $jsPath, $timeout, $user_agent);
         } else {
             list($content, $httpStatus) = getHttpContentAndStatus($MATOMO_URL . $filerequest, $timeout, $user_agent);
         }
