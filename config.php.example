@@ -8,7 +8,7 @@
 // Edit the line below, and replace http://your-matomo-domain.example.org/matomo/
 // with your Matomo URL ending with a slash.
 // This URL will never be revealed to visitors or search engines.
-$PIWIK_URL = 'http://your-matomo-domain.example.org/matomo/';
+$MATOMO_URL = 'http://your-matomo-domain.example.org/matomo/';
 
 // Edit the line below and replace http://your-tracker-proxy.org/ with the URL to your tracker-proxy
 // setup. This URL will be used in Matomo output that contains the Matomo URL, so your Matomo is effectively
@@ -22,7 +22,7 @@ $TOKEN_AUTH = 'xyz';
 // Maximum time, in seconds, to wait for the Matomo server to return the 1*1 GIF
 $timeout = 5;
 
-// By default, the HTTP User Agent will be set to the user agent of the client requesting piwik.php
+// By default, the HTTP User Agent will be set to the user agent of the client requesting matomo.php
 // Edit the line below to force the proxy to always use a specific user agent string.
 $user_agent = '';
 

@@ -28,9 +28,9 @@ if (!empty($headers)) {
 }
 
 if (!empty($_GET['debug'])) {
-    $host = parse_url($PIWIK_URL, PHP_URL_HOST);
+    $host = parse_url($MATOMO_URL, PHP_URL_HOST);
     echo "\nHOST: $host\n";
-    echo "URL: $PIWIK_URL\n";
+    echo "URL: $MATOMO_URL\n";
     echo "TOKEN_AUTH: $TOKEN_AUTH\n";
 }
 
