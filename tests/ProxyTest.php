@@ -9,19 +9,19 @@ class ProxyTest extends TestCase
     /**
      * @test
      */
-    public function get_without_parameters_should_forward_piwik_js_content()
+    public function get_without_parameters_should_forward_matomo_js_content()
     {
         $response = $this->send();
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
+        $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
     }
 
     /**
      * @test
      */
-    public function piwik_js_should_not_be_updated_if_less_than_1_day()
+    public function matomo_js_should_not_be_updated_if_less_than_1_day()
     {
         $response = $this->send(null, new DateTime('-23 hours'));
 
@@ -32,12 +32,12 @@ class ProxyTest extends TestCase
     /**
      * @test
      */
-    public function piwik_js_should_be_updated_if_more_than_1_day()
+    public function matomo_js_should_be_updated_if_more_than_1_day()
     {
         $response = $this->send(null, new DateTime('-25 hours'));
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('this is piwik.js', $response->getBody()->getContents());
+        $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
         $this->assertNotNull($response->getHeader('Last-Modified'));
     }
@@ -45,7 +45,7 @@ class ProxyTest extends TestCase
     /**
      * @test
      */
-    public function get_with_parameters_should_forward_piwik_php()
+    public function get_with_parameters_should_forward_matomo_php()
     {
         $response = $this->send('foo=bar');
 
@@ -107,22 +107,22 @@ RESPONSE;
     /**
      * @test
      */
-    public function get_return_piwikJs_without_error_when_server_down()
+    public function get_return_matomoJs_without_error_when_server_down()
     {
-        $piwikUrl = $this->getPiwikUrl();
+        $matomoUrl = $this->getMatomoUrl();
 
-        // Remove config file -> piwik.php will use the default value 'http://your-piwik-domain.example.org/piwik/'
+        // Remove config file -> matomo.php will use the default value 'http://your-matomo-domain.example.org/matomo/'
         rename(__DIR__ . "/../config.php", __DIR__ . "/../config.php.save");
 
         $this->assertFileNotExists('../config.php');
 
-        $response = $this->send(null, null, $piwikUrl);
+        $response = $this->send(null, null, $matomoUrl);
 
         // Restore the config file
         rename(__DIR__ . "/../config.php.save", __DIR__ . "/../config.php");
         $this->assertFileExists('../config.php');
 
-        $expected = '/* there was an error loading piwik.js */';
+        $expected = '/* there was an error loading matomo.js */';
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $response->getBody()->getContents());
 
@@ -342,22 +342,22 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    private function send($query = null, DateTime $modifiedSince = null, $piwikUrl = null, $addHeaders = null, $path = null,
+    private function send($query = null, DateTime $modifiedSince = null, $matomoUrl = null, $addHeaders = null, $path = null,
                           $method = 'GET', $body = null, $forceIpV6 = false)
     {
-        if(is_null($piwikUrl)) {
-            $piwikUrl = $this->getPiwikUrl();
+        if(is_null($matomoUrl)) {
+            $matomoUrl = $this->getMatomoUrl();
         }
 
         if ($forceIpV6) {
             // on travis, using an ipv6 ip address causes an error when resolving localhost
-            $piwikUrl = str_replace("localhost", "127.0.0.1", $piwikUrl);
+            $matomoUrl = str_replace("localhost", "127.0.0.1", $matomoUrl);
         }
 
         $client = new Client();
 
         if (!$path) {
-            $path = '/piwik.php';
+            $path = '/matomo.php';
         }
 
         if ($query) {
@@ -388,13 +388,13 @@ RESPONSE;
             ];
         }
 
-        $request = $client->createRequest($method, $piwikUrl . $path . $query, $requestOptions);
+        $request = $client->createRequest($method, $matomoUrl . $path . $query, $requestOptions);
         $response = $client->send($request);
 
         return $response;
     }
 
-    private function getPiwikUrl()
+    private function getMatomoUrl()
     {
         $pathConfig = "../config.php";
         if(!file_exists($pathConfig)) {
@@ -404,15 +404,15 @@ RESPONSE;
 
             throw new Exception("To run tests, create config.php with following content:
 <?php
-\$PIWIK_URL = 'http://localhost/tracker-proxy/tests/server/';
+\$MATOMO_URL = 'http://localhost/tracker-proxy/tests/server/';
 \$PROXY_URL = 'http://localhost/tracker-proxy/';
 \$TOKEN_AUTH = 'xyz';
 \$timeout = 5;
 ");
         }
         require $pathConfig;
-        $PIWIK_URL = str_replace('tests/server/', '', $PIWIK_URL);
-        return $PIWIK_URL;
+        $MATOMO_URL = str_replace('tests/server/', '', $MATOMO_URL);
+        return $MATOMO_URL;
     }
 
     private function getProxyUrl()
@@ -425,7 +425,7 @@ RESPONSE;
 
             throw new Exception("To run tests, create config.php with following content:
 <?php
-\$PIWIK_URL = 'http://localhost/tracker-proxy/tests/server/';
+\$MATOMO_URL = 'http://localhost/tracker-proxy/tests/server/';
 \$PROXY_URL = 'http://localhost/tracker-proxy/';
 \$TOKEN_AUTH = 'xyz';
 \$timeout = 5;

@@ -1,6 +1,5 @@
 <?php
-
-$PIWIK_URL = 'http://localhost/tests/server/';
+$MATOMO_URL = 'http://localhost/tests/server/';
 
 $PROXY_URL = 'http://proxy/';
 

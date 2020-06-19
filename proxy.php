@@ -1,9 +1,9 @@
 <?php
 /**
- * Piwik - free/libre analytics platform
- * Piwik Proxy Hide URL
+ * Matomo - free/libre analytics platform
+ * Matomo Proxy Hide URL
  *
- * @link http://piwik.org/faq/how-to/#faq_132
+ * @link https://matomo.org/faq/how-to/#faq_132
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
@@ -23,14 +23,18 @@ if (file_exists(__DIR__ . '/config.php')) {
 
 // -----
 // Important: read the instructions in README.md or at:
-// https://github.com/piwik/tracker-proxy#piwik-tracker-proxy
+// https://github.com/matomo-org/tracker-proxy#matomo-tracker-proxy
 // -----
+if (! isset($MATOMO_URL) && isset($PIWIK_URL)) {
+    // FOR BC
+    $MATOMO_URL = $PIWIK_URL;
+}
 
-// Edit the line below, and replace http://your-piwik-domain.example.org/piwik/
-// with your Piwik URL ending with a slash.
+// Edit the line below, and replace http://your-matomo-domain.example.org/matomo/
+// with your Matomo URL ending with a slash.
 // This URL will never be revealed to visitors or search engines.
-if (! isset($PIWIK_URL)) {
-    $PIWIK_URL = 'http://your-piwik-domain.example.org/piwik/';
+if (! isset($MATOMO_URL)) {
+    $MATOMO_URL = 'http://your-matomo-domain.example.org/matomo/';
 }
 
 // Edit the line below, and replace xyz by the token_auth for the user "UserTrackingAPI"
@@ -39,12 +43,12 @@ if (! isset($TOKEN_AUTH)) {
     $TOKEN_AUTH = 'xyz';
 }
 
-// Maximum time, in seconds, to wait for the Piwik server to return the 1*1 GIF
+// Maximum time, in seconds, to wait for the Matomo server to return the 1*1 GIF
 if (! isset($timeout)) {
     $timeout = 5;
 }
 
-// The HTTP User-Agent to set in the request sent to Piwik Tracking API
+// The HTTP User-Agent to set in the request sent to Matomo Tracking API
 if (empty($user_agent)) {
     $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
@@ -56,7 +60,7 @@ if (empty($user_agent)) {
 // the HTTP response headers captured via fopen or curl
 $httpResponseHeaders = array();
 
-// 1) PIWIK.JS PROXY: No _GET parameter, we serve the JS file; or we serve a requested js file
+// 1) MATOMO.JS PROXY: No _GET parameter, we serve the JS file; or we serve a requested js file
 if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filerequest, -3) === '.js')) {
     $modifiedSince = false;
     if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
@@ -67,7 +71,7 @@ if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filereque
         }
         $modifiedSince = strtotime($modifiedSince);
     }
-    // Re-download the piwik.js once a day maximum
+    // Re-download the matomo.js once a day maximum
     $lastModified = time() - 86400;
 
     // set HTTP response headers
@@ -80,36 +84,41 @@ if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filereque
         sendHeader('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
         sendHeader('Content-Type: application/javascript; charset=UTF-8');
 
-        // Silent fail: hide Warning in 'piwik.js' response
+        // Silent fail: hide Warning in 'matomo.js' response
         if (empty($_GET) && empty($_POST)) {
-            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . 'piwik.js', $timeout, $user_agent);
+            if ($path !== 'matomo.php') {
+                $jsPath = 'piwik.js'; // for BC eg in case user uses an older version of Matomo
+            } else {
+                $jsPath = 'matomo.js';
+            }
+            list($content, $httpStatus) = getHttpContentAndStatus($MATOMO_URL . $jsPath, $timeout, $user_agent);
         } else {
-            list($content, $httpStatus) = getHttpContentAndStatus($PIWIK_URL . $filerequest, $timeout, $user_agent);
+            list($content, $httpStatus) = getHttpContentAndStatus($MATOMO_URL . $filerequest, $timeout, $user_agent);
         }
-        if ($piwikJs = $content) {
-            echo $piwikJs;
+        if ($matomoJs = $content) {
+            echo $matomoJs;
         } else {
-            echo '/* there was an error loading piwik.js */';
+            echo '/* there was an error loading matomo.js */';
         }
     }
     exit;
 }
 @ini_set('magic_quotes_runtime', 0);
 
-// 2) PIWIK.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
+// 2) MATOMO.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
 if (strpos($path, '?') === false) {
     $path = $path . '?';
 }
 
 $extraQueryParams = array();
-if (strpos($path, 'piwik.php') === 0) {
+if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
     $extraQueryParams = array(
         'cip' => getVisitIp(),
         'token_auth' => $TOKEN_AUTH,
     );
 }
 
-$url = $PIWIK_URL . $path;
+$url = $MATOMO_URL . $path;
 $url .= http_build_query(array_merge($extraQueryParams, $_GET));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
@@ -140,15 +149,15 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
 function sanitizeContent($content)
 {
     global $TOKEN_AUTH;
-    global $PIWIK_URL;
+    global $MATOMO_URL;
     global $PROXY_URL;
     global $VALID_FILES;
 
-    $matomoHost = parse_url($PIWIK_URL, PHP_URL_HOST);
+    $matomoHost = parse_url($MATOMO_URL, PHP_URL_HOST);
     $proxyHost = parse_url($PROXY_URL, PHP_URL_HOST);
 
     $content = str_replace($TOKEN_AUTH, '<token>', $content);
-    $content = str_replace($PIWIK_URL, $PROXY_URL, $content);
+    $content = str_replace($MATOMO_URL, $PROXY_URL, $content);
     $content = str_replace($matomoHost, $proxyHost, $content);
 
     if(isset($VALID_FILES)) {

@@ -2,4 +2,4 @@
 
 echo "in index.php\n";
 
-include __DIR__ . '/piwik.php';
+include __DIR__ . '/matomo.php';

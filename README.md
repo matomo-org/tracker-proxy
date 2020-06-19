@@ -30,34 +30,34 @@ In your Matomo server:
 
 You need to install the proxy on the server where your websites are hosted. You can do it both ways:
 
-- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php), [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
+- download the files manually
 - or install the whole repository with git
 
-#### Manual download of `piwik.php`
+#### Manual download of `matomo.php`
 
-- download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
-  to your website root directory, for example at http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
+- download [`matomo.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo.php), download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
+  to your website root directory, for example at http://trackedsite.com/matomo.php, http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
 - edit the file to set the configuration variables:
-    - `$PIWIK_URL` should contain the URL to your Matomo server
+    - `$MATOMO_URL` should contain the URL to your Matomo server
     - `$PROXY_URL` should contain the URL to the tracker-proxy server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 #### With git
 
-- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at http://trackedsite.com/matomo/piwik.php)
+- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at http://trackedsite.com/matomo/matomo.php)
 - copy the configuration template: `cp config.php.example config.php`
 - change the configuration in the newly created `config.php`:
-    - `$PIWIK_URL` should contain the URL to your Matomo server
+    - `$MATOMO_URL` should contain the URL to your Matomo server
     - `$PROXY_URL` should contain the URL to the tracker-proxy server
     - `$TOKEN_AUTH` should contain the `token_auth`
 
 By using git you will later be able to update by simply running `git pull`.
 
-Be aware that with this method, `piwik.php` and other files are in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
+Be aware that with this method, `matomo.php` and other files are in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
 
 ### 3. Use the proxy in the Javascript tracker
 
-The proxy file (http://trackedsite.com/piwik.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
+The proxy file (http://trackedsite.com/matomo.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
 
 To achieve this, change the Matomo Javascript Code that is in the footer of your pages:
 
@@ -68,10 +68,10 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
     [...]
     (function() {
         var u="//trackedsite.com/";
-        _paq.push(["setTrackerUrl", u+"piwik.php"]);
+        _paq.push(["setTrackerUrl", u+"matomo.php"]);
         _paq.push(["setSiteId", "trackedsite-id"]);
         var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0];
-        g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"piwik.php"; s.parentNode.insertBefore(g,s);
+        g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"matomo.php"; s.parentNode.insertBefore(g,s);
     })();
     </script>
     <!-- End Matomo Code -->
@@ -80,13 +80,13 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
     What has changed in this code snippet compared to the normal Matomo code?
 
     - the secret Matomo URL is now replaced by your website URL (the proxy)
-    - `piwik.js` becomes `piwik.php` (or `matomo/piwik.php` if you used the *git* method): piwik.php is the proxy script
+    - `matomo.js` becomes `matomo.php` (or `matomo/matomo.php` if you used the *git* method): matomo.php is the proxy script
     - the `<noscript>` part of the code at the end is removed, since it is not currently used by Matomo, and it contains the (secret) Matomo URL which you want to hide
     - make sure to replace `trackedsite-id` with your idsite
 
 - paste the modified Matomo Javascript code in the pages you wish to track.
 
-This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/piwik.php`, which will then automatically call your (hidden) Matomo Server URL.
+This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/matomo.php`, which will then automatically call your (hidden) Matomo Server URL.
 
 At this stage, example.com should be tracked by your Matomo without showing the Matomo server URL. Repeat the step 3. for each website you wish to track in Matomo.
 
@@ -101,12 +101,12 @@ _Note: you can get the opt out iframe from inside the Administration > Privacy >
 
 ### Timeout
 
-By default, the `piwik.php` proxy will wait 5 seconds for the Matomo server to return the response. 
+By default, the `matomo.php` proxy will wait 5 seconds for the Matomo server to return the response. 
 You may change this timeout by editing the `$timeout` value in `config.php`.
  
 ### User-Agent
  
-By default, the `piwik.php` proxy will contact your Matomo server with the User-Agent of the client requesting `piwik.php`. 
+By default, the `matomo.php` proxy will contact your Matomo server with the User-Agent of the client requesting `matomo.php`. 
 You may force the proxy script to use a particular User-Agent by  editing the `$user_agent` value in `config.php`.
 
 ## Contributing
@@ -119,7 +119,7 @@ Before running the tests, create a config.php file w/ the following contents in 
 
 ```
 <?php
-$PIWIK_URL = 'http://localhost/tests/server/';
+$MATOMO_URL = 'http://localhost/tests/server/';
 $TOKEN_AUTH = 'xyz';
 $timeout = 5;
 ```
