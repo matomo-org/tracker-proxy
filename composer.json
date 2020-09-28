@@ -1,0 +1,12 @@
+{
+    "name": "firelink/tracker-proxy",
+    "description": "Fork for matomo-org/tracker-proxy with composer.json",
+    "type": "library",
+    "authors": [
+        {
+            "name": "ash",
+            "email": "ash@firelink.media"
+        }
+    ],
+    "require": {}
+}
