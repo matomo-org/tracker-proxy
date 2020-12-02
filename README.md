@@ -23,7 +23,7 @@ In your Matomo server:
 
 - login as Super user
 - create a user, set the login for example: "UserTrackingAPI"
-- assign this user *admin* permission on all websites you wish to track
+- assign this user **write** or **admin** permission on all websites you wish to track (otherwise the visitor IP address and other things won't be tracked correctly)
 - copy the `token_auth` for this user: you will use it later
 
 ### 2. Install the proxy
