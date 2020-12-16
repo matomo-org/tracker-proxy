@@ -24,7 +24,7 @@ In your Matomo server:
 - login as Super user
 - create a user, set the login for example: "UserTrackingAPI"
 - assign this user **write** or **admin** permission on all websites you wish to track (otherwise the visitor IP address and other things won't be tracked correctly)
-- copy the `token_auth` for this user: you will use it later
+- copy the `token_auth` for this user: you will use it later (Instructions for generating an `auth_token` can be found in [our FAQ here](https://matomo.org/faq/general/faq_114/))
 
 ### 2. Install the proxy
 
@@ -35,7 +35,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 #### Manual download of `matomo.php`
 
-- download [`matomo.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo.php), download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
+- download [`matomo.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo.php), download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php) & if you are using the Heatmaps and Session recordings plugin also download [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
   to your website root directory, for example at http://trackedsite.com/matomo.php, http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
 - edit the file to set the configuration variables:
     - `$MATOMO_URL` should contain the URL to your Matomo server
