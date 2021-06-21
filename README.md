@@ -69,7 +69,7 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
     (function() {
         var u="//trackedsite.com/";
         _paq.push(["setTrackerUrl", u+"matomo.php"]);
-        _paq.push(["setSiteId", "trackedsite-id"]);
+        _paq.push(["setSiteId", "tracked-site-id-here"]);
         var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0];
         g.type="text/javascript"; g.async=true; g.defer=true; g.src=u+"matomo.php"; s.parentNode.insertBefore(g,s);
     })();
@@ -79,10 +79,10 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
 
     What has changed in this code snippet compared to the normal Matomo code?
 
-    - the secret Matomo URL is now replaced by your website URL (the proxy)
+    - any reference(s) to the secret Matomo URL are now replaced by your website URL (the proxy). 
     - `matomo.js` becomes `matomo.php` (or `matomo/matomo.php` if you used the *git* method): matomo.php is the proxy script
-    - the `<noscript>` part of the code at the end is removed, since it is not currently used by Matomo, and it contains the (secret) Matomo URL which you want to hide
-    - make sure to replace `trackedsite-id` with your idsite
+    - make sure to replace `tracked-site-id-here` with your idsite
+    - if the `<noscript>` is present in your tracking code, you can remove it (it contains the secret Matomo URL which you want to hide)
 
 - paste the modified Matomo Javascript code in the pages you wish to track.
 
