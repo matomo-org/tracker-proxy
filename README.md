@@ -1,6 +1,6 @@
 # Matomo Tracker Proxy
 
-[![Build Status](https://travis-ci.com/matomo-org/tracker-proxy.svg?branch=master)](https://travis-ci.com/matomo-org/tracker-proxy)
+[![Build Status](https://app.travis-ci.com/matomo-org/tracker-proxy.svg?branch=master)](https://app.travis-ci.com/matomo-org/tracker-proxy)
 
 This script allows to track websites with Matomo **without revealing the Matomo server URL**.
 
