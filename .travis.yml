@@ -26,11 +26,10 @@ before_script:
   - sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)?g" --in-place /etc/apache2/sites-available/000-default.conf
   - sudo service apache2 restart
   - cp tests/travis/config.php config.php
-  - cd tests
   - composer install --no-progress
 
 script:
-  - vendor/bin/phpunit
+  - composer test
 
 after_script:
   - sudo cat /var/log/apache2/access.log

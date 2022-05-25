@@ -112,15 +112,21 @@ RESPONSE;
         $matomoUrl = $this->getMatomoUrl();
 
         // Remove config file -> matomo.php will use the default value 'http://your-matomo-domain.example.org/matomo/'
-        rename(__DIR__ . "/../config.php", __DIR__ . "/../config.php.save");
+        rename(__DIR__ . '/../config.php', __DIR__ . '/../config.php.save');
 
-        $this->assertFileNotExists('../config.php');
+        $this->assertFileNotExists('config.php');
 
-        $response = $this->send(null, null, $matomoUrl);
+        try {
+            $response = $this->send(null, null, $matomoUrl);
+        }
+        catch (exception $e) {
+            // continue even if guzzle throws errors, otherwise the next test
+            // will fail as well due to the missing config file
+        }
 
         // Restore the config file
-        rename(__DIR__ . "/../config.php.save", __DIR__ . "/../config.php");
-        $this->assertFileExists('../config.php');
+        rename(__DIR__ . '/../config.php.save', __DIR__ . '/../config.php');
+        $this->assertFileExists('config.php');
 
         $expected = '/* there was an error loading matomo.js */';
         $this->assertEquals(200, $response->getStatusCode());
@@ -396,9 +402,9 @@ RESPONSE;
 
     private function getMatomoUrl()
     {
-        $pathConfig = "../config.php";
+        $pathConfig = "./config.php";
         if(!file_exists($pathConfig)) {
-            if(file_exists("../config.php.save")) {
+            if(file_exists("./config.php.save")) {
                 throw new Exception("Rename config.php.save to config.php and try again.");
             }
 
@@ -417,9 +423,9 @@ RESPONSE;
 
     private function getProxyUrl()
     {
-        $pathConfig = "../config.php";
+        $pathConfig = "./config.php";
         if(!file_exists($pathConfig)) {
-            if(file_exists("../config.php.save")) {
+            if(file_exists("./config.php.save")) {
                 throw new Exception("Rename config.php.save to config.php and try again.");
             }
 
