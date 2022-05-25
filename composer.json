@@ -1,0 +1,27 @@
+{
+    "name": "matomo/tracker-proxy",
+    "description": "HTTP proxy for Matomo's tracker API. This script allows to track websites with Matomo without revealing to your visitors the secret Matomo server URL.",
+    "type": "project",
+    "license": "GPL-3.0+",
+    "authors": [
+        {
+            "name": "The Matomo Team",
+            "email": "hello@matomo.org",
+            "homepage": "https://matomo.org/team/"
+        }
+    ],
+    "require": {
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8.36",
+        "guzzlehttp/guzzle": "^5.0"
+    },
+    "scripts": {
+        "test": [
+            "phpunit tests/"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
