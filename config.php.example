@@ -2,7 +2,7 @@
 
 // -----
 // Important: read the instructions in README.md or at:
-// https://github.com/matomo/matomo/tree/master/misc/proxy-hide-matomo-url#matomo-proxy-hide-url
+// https://github.com/matomo-org/tracker-proxy#readme
 // -----
 
 // Edit the line below, and replace http://your-matomo-domain.example.org/matomo/
