@@ -10,7 +10,7 @@ This is useful for users who track multiple websites on the same Matomo server, 
 
 To run this properly you will need:
 
-- latest version of Matomo installed on a server
+- latest version of Matomo installed on a server (or Matomo Cloud)
 - one or several website(s) to track with this Matomo, for example http://trackedsite.com
 - the website to track must run on a server with PHP 5.3 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
@@ -32,6 +32,11 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 - download the files manually
 - or install the whole repository with git
+
+
+| :zap:        Important note about where to install the proxy   |
+|-----------------------------------------|
+| To ensure the highest data accuracy possible, and that your Matomo cookies are set correctly, please install the proxy in your main website domain name and  web server. This proxy should be ideally installed on your webserver directly under `trackedsite.com`. If you installed the proxy in a sub-domain under `analytics.trackedsite.com` then this would cause data to be less accurate. (Why? because if the sub-domain `analytics.trackedsite.com` was to resolve to a CNAME that does _not_ match `trackedsite.com` OR if it was to resolve to A/AAAA addresses that do not match the first half of the A/AAAA addresses running `trackedsite.com`, then the cookies set by the Matomo Tracker Proxy in the response would only have a lifetime of maximum 7 days on Safari >= 16.4.) |
 
 #### Manual download of `matomo.php`
 
