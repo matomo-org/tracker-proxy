@@ -5,7 +5,8 @@ define('MATOMO_PROXY_FROM_ENDPOINT', 1);
 $path = 'index.php';
 
 $SUPPORTED_METHODS = [
-    'CoreAdminHome.optOut'
+    'CoreAdminHome.optOut',
+	'CoreAdminHome.optOutJS'
 ];
 $VALID_FILES = [
     'plugins/CoreAdminHome/javascripts/optOut.js'
