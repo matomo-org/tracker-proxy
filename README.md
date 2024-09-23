@@ -11,7 +11,7 @@ This is useful for users who track multiple websites on the same Matomo server, 
 To run this properly you will need:
 
 - latest version of Matomo installed on a server (or Matomo Cloud)
-- one or several website(s) to track with this Matomo, for example http://trackedsite.com
+- one or several website(s) to track with this Matomo, for example `http://trackedsite.com`
 - the website to track must run on a server with PHP 5.3 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
@@ -41,7 +41,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 #### Manual download of `matomo.php`
 
 - download [`matomo.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo.php), download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php)  & if you are using the Heatmaps and Session recordings plugin also download [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
-  to your website root directory, for example at http://trackedsite.com/matomo.php, http://trackedsite.com/piwik.php, http://trackedsite.com/proxy.php, http://trackedsite.com/matomo-proxy.php & http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php
+  to your website root directory, for example at `http://trackedsite.com/matomo.php`, `http://trackedsite.com/piwik.php`, `http://trackedsite.com/proxy.php`, `http://trackedsite.com/matomo-proxy.php` & `http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php`
 - edit the file to set the configuration variables:
     - `$MATOMO_URL` should contain the URL to your Matomo server
     - `$PROXY_URL` should contain the URL to the tracker-proxy server
@@ -49,7 +49,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 #### With git
 
-- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at http://trackedsite.com/matomo/matomo.php)
+- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at `http://trackedsite.com/matomo/matomo.php`)
 - copy the configuration template: `cp config.php.example config.php`
 - change the configuration in the newly created `config.php`:
     - `$MATOMO_URL` should contain the URL to your Matomo server
@@ -62,7 +62,7 @@ Be aware that with this method, `matomo.php` and other files are in a `matomo/` 
 
 ### 3. Use the proxy in the Javascript tracker
 
-The proxy file (http://trackedsite.com/matomo.php) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (http://your-matomo-domain.example.org/matomo/).
+The proxy file (`http://trackedsite.com/matomo.php`) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (`http://your-matomo-domain.example.org/matomo/`).
 
 To achieve this, change the Matomo Javascript Code that is in the footer of your pages:
 
