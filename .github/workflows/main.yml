@@ -20,6 +20,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
+      - name: Composer update
+        run: composer update
       - name: Composer install
         run: composer install
       - name: PHPUnit / PHP ${{ matrix.php-version }}
