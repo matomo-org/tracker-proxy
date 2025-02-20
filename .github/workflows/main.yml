@@ -23,7 +23,7 @@ jobs:
       - name: Update package lists
         run: sudo apt-get update
       - name: Install Apache and required modules
-        run: sudo apt-get install apache2 libapache2-mod-fastcgi
+        run: sudo apt-get install apache2 libapache2-mod-fcgid
       - name: Configure PHP-FPM
         run: |
           sudo cp ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf.default ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf
