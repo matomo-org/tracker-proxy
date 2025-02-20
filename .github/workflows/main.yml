@@ -20,6 +20,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
+      - name: Update package lists
+        run: sudo apt-get update
+      - name: Copy config file
+        run: cp tests/travis/config.php config.php
       - name: Composer update
         run: composer update
       - name: Composer install
