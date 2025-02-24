@@ -26,7 +26,7 @@ jobs:
       - name: Install Apache and required modules
         run: sudo apt-get install apache2 libapache2-mod-fcgid
       - name: test
-        run: ls -a ~
+        run: ls -a /etc/
       - name: Configure PHP-FPM
         run: |
           PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
