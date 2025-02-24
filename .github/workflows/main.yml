@@ -27,12 +27,12 @@ jobs:
         run: sudo apt-get install apache2 libapache2-mod-fcgid
       - name: Configure PHP-FPM
         run: |
-          sudo cp ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf.default ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf
+          sudo cp ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/etc/php-fpm.conf.default ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/etc/php-fpm.conf
           sudo a2enmod rewrite actions fastcgi alias
-          echo "cgi.fix_pathinfo = 1" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+          echo "cgi.fix_pathinfo = 1" >> ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/etc/php.ini
           sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
           sudo chown -R runner:runner /var/lib/apache2/fastcgi
-          ~/.phpenv/versions/$(phpenv version-name)/sbin/php-fpm
+          ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/sbin/php-fpm
       - name: Copy config file
         run: cp tests/travis/config.php config.php
       - name: Composer update
