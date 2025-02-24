@@ -30,7 +30,7 @@ jobs:
       - name: Configure PHP-FPM
         run: |
           PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
-          sudo cp /etc/php/$PHP_VERSION/fpm/php-fpm.conf.default /etc/php/$PHP_VERSION/fpm/php-fpm.conf
+          sudo apt-get install -y php$PHP_VERSION-fpm
           sudo a2enmod rewrite actions fastcgi alias
           echo "cgi.fix_pathinfo = 1" >> /etc/php/$PHP_VERSION/fpm/php.ini
           sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
