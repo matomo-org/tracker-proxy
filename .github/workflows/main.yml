@@ -28,11 +28,17 @@ jobs:
       - name: Configure PHP-FPM
         run: |
           PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+          echo 1
           sudo apt-get install -y php$PHP_VERSION-fpm
+          echo 2
           sudo a2enmod rewrite actions fastcgi alias
+          echo 3
           echo "cgi.fix_pathinfo = 1" >> /etc/php/$PHP_VERSION/fpm/php.ini
+          echo 4
           sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
+          echo 5
           sudo chown -R runner:runner /var/lib/apache2/fastcgi
+          echo 6
           sudo service php$PHP_VERSION-fpm start
       - name: Copy config file
         run: cp tests/travis/config.php config.php
