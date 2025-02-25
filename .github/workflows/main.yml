@@ -32,7 +32,7 @@ jobs:
         with:
           php-version: '7.4'
           site-directory: /path/to/code
-          http-port: 800
+          http-port: 80
       - name: Copy config file
         run: cp tests/travis/config.php config.php
       - name: Composer update
@@ -42,6 +42,7 @@ jobs:
       - name: PHPUnit / PHP ${{ matrix.php-version }}
         run: composer test
       - name: Display Apache logs on failure
+        if: failure()
         run: |
           sudo cat /var/log/apache2/access.log
           sudo cat /var/log/apache2/error.log
