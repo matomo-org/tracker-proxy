@@ -34,6 +34,7 @@ jobs:
           sudo a2enmod rewrite actions fcgid alias
           sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
           sudo cp -f tests/travis/apache-vhost /etc/apache2/sites-available/000-default.conf
+          pwd
           sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)?g" --in-place /etc/apache2/sites-available/000-default.conf
           sudo chown -R runner:runner /var/lib/apache2/fcgid
           sudo systemctl restart apache2
