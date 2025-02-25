@@ -357,7 +357,7 @@ RESPONSE;
 
         if ($forceIpV6) {
             // on travis, using an ipv6 ip address causes an error when resolving localhost
-            $matomoUrl = str_replace("localhost", "127.0.0.1", $matomoUrl);
+            //$matomoUrl = str_replace("localhost", "127.0.0.1", $matomoUrl);
         }
 
         $client = new Client();
