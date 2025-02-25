@@ -43,8 +43,6 @@ jobs:
           sudo service php$PHP_VERSION-fpm start
       - name: Copy config file
         run: cp tests/travis/config.php config.php
-      - name: PHPUnit version
-        run: vendor/bin/phpunit --version
       - name: Composer update
         run: composer update
       - name: Composer install
