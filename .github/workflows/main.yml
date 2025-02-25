@@ -33,6 +33,7 @@ jobs:
           echo 2
           sudo a2enmod rewrite actions fcgid alias
           sudo systemctl restart apache2
+          sudo systemctl status apache2
           echo 3
           echo "cgi.fix_pathinfo = 1" >> /etc/php/$PHP_VERSION/fpm/php.ini
           echo 4
