@@ -31,7 +31,7 @@ jobs:
         uses: thunder/apache-shiva-php-action@v1
         with:
           php-version: '7.4'
-          site-directory: ./
+          site-directory: ${{ github.workspace }}
           http-port: 80
       - name: Copy config file
         run: cp tests/travis/config.php config.php
