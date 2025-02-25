@@ -49,3 +49,7 @@ jobs:
         run: composer install
       - name: PHPUnit / PHP ${{ matrix.php-version }}
         run: composer test
+      - name: Display Apache logs on failure
+        run: |
+          sudo cat /var/log/apache2/access.log
+          sudo cat /var/log/apache2/error.log
