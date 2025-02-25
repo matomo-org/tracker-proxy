@@ -234,7 +234,7 @@ array (
   'debug' => '1',
 )
 HOST: proxy
-URL: http://proxy/
+URL: http://proxy:8080/
 TOKEN_AUTH: <token>
 
 RESPONSE;
