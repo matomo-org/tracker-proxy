@@ -23,6 +23,7 @@ before_script:
   - sudo chown -R travis:travis /var/lib/apache2/fastcgi
   - ~/.phpenv/versions/$(phpenv version-name)/sbin/php-fpm
   - sudo cp -f tests/travis/apache-vhost /etc/apache2/sites-available/000-default.conf
+  - pwd
   - sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)?g" --in-place /etc/apache2/sites-available/000-default.conf
   - sudo service apache2 restart
   - cp tests/travis/config.php config.php
