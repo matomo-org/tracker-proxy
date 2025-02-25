@@ -394,8 +394,6 @@ RESPONSE;
             ];
         }
 
-        var_dump($matomoUrl . $path . $query);
-
         $request = $client->createRequest($method, $matomoUrl . $path . $query, $requestOptions);
         $response = $client->send($request);
 
