@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['5.6']
+        php-version: ['7.4']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,24 +23,16 @@ jobs:
           php-version: ${{ matrix.php-version }}
       - name: Update package lists
         run: sudo apt-get update
-      - name: Install Apache and required modules
-        run: sudo apt-get install apache2 libapache2-mod-fastcgi
-      - name: Configure PHP-FPM
-        run: |
-          PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
-          echo 1
-          sudo apt-get install -y php$PHP_VERSION-fpm
-          echo 2
-          sudo a2enmod rewrite actions fcgid fastcgi alias
-          sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
-          sudo cp -f tests/travis/apache-vhost /etc/apache2/sites-available/000-default.conf
-          pwd
-          sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)?g" --in-place /etc/apache2/sites-available/000-default.conf
-          sudo chown -R runner:runner /var/lib/apache2/fcgid
-          sudo systemctl restart apache2
-          echo 3
-          echo "cgi.fix_pathinfo = 1" >> /etc/php/$PHP_VERSION/fpm/php.ini
-          sudo service php$PHP_VERSION-fpm start
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+      - name: Setup Apache
+        uses: thunder/apache-shiva-php-action@v1
+        with:
+          php-version: '7.4'
+          site-directory: /path/to/code
+          http-port: 800
       - name: Copy config file
         run: cp tests/travis/config.php config.php
       - name: Composer update
