@@ -32,15 +32,13 @@ jobs:
           sudo apt-get install -y php$PHP_VERSION-fpm
           echo 2
           sudo a2enmod rewrite actions fcgid alias
+          sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
+          sudo cp -f tests/travis/apache-vhost /etc/apache2/sites-available/000-default.conf
+          sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)?g" --in-place /etc/apache2/sites-available/000-default.conf
+          sudo chown -R runner:runner /var/lib/apache2/fcgid
           sudo systemctl restart apache2
-          sudo systemctl status apache2
           echo 3
           echo "cgi.fix_pathinfo = 1" >> /etc/php/$PHP_VERSION/fpm/php.ini
-          echo 4
-          sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
-          echo 5
-          sudo chown -R runner:runner /var/lib/apache2/fcgid
-          echo 6
           sudo service php$PHP_VERSION-fpm start
       - name: Copy config file
         run: cp tests/travis/config.php config.php
