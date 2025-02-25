@@ -32,7 +32,7 @@ jobs:
         with:
           php-version: '7.4'
           site-directory: ${{ github.workspace }}
-          http-port: 80
+          http-port: 8080
       - name: Copy config file
         run: cp tests/travis/config.php config.php
       - name: Composer update
