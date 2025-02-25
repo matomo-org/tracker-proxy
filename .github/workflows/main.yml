@@ -34,7 +34,7 @@ jobs:
           site-directory: ${{ github.workspace }}
           http-port: 8080
       - name: Copy config file
-        run: cp tests/travis/config.php config.php
+        run: cp tests/github/config.php config.php
       - name: Composer update
         run: composer update
       - name: Composer install
