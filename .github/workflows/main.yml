@@ -24,7 +24,7 @@ jobs:
       - name: Update package lists
         run: sudo apt-get update
       - name: Install Apache and required modules
-        run: sudo apt-get install apache2 libapache2-mod-fcgid
+        run: sudo apt-get install apache2 libapache2-mod-fastcgi
       - name: Configure PHP-FPM
         run: |
           PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
