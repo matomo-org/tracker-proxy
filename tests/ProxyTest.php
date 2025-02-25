@@ -417,7 +417,7 @@ RESPONSE;
 ");
         }
         require $pathConfig;
-        $MATOMO_URL = str_replace('tests/server/', '', $MATOMO_URL);
+        $MATOMO_URL = str_replace('/tests/server/', '', $MATOMO_URL);
         return $MATOMO_URL;
     }
 
