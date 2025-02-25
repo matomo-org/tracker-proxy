@@ -31,7 +31,7 @@ jobs:
           echo 1
           sudo apt-get install -y php$PHP_VERSION-fpm
           echo 2
-          sudo a2enmod rewrite actions fcgid alias
+          sudo a2enmod rewrite actions fcgid fastcgi alias
           sudo sed -i -e "s,www-data,runner,g" /etc/apache2/envvars
           sudo cp -f tests/travis/apache-vhost /etc/apache2/sites-available/000-default.conf
           pwd
