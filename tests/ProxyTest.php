@@ -13,6 +13,7 @@ class ProxyTest extends TestCase
     {
         $response = $this->send();
 
+        var_dump($response->getHeader('Content-Type'));
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
