@@ -23,13 +23,13 @@ jobs:
         with:
           lfs: false
           persist-credentials: false
-      - name: Install dependencies
-        run: composer install --dev --prefer-dist --no-progress --no-suggest
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.2'
           tools: cs2pr
+      - name: Install dependencies
+        run: composer install
       - name: Check PHP code styles
         id: phpcs
         run: ./vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
