@@ -289,13 +289,13 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
         $stream_options['http']['content'] = $postBody;
 
-        if(!empty($http_ip_forward_header)) {
+        if (!empty($http_ip_forward_header)) {
             $visitIp = getVisitIp();
             $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
         }
     }
 
-    if($useFopen) {
+    if ($useFopen) {
         $ctx = stream_context_create($stream_options);
 
         if ($DEBUG_PROXY) {
@@ -311,7 +311,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
             $httpResponseHeaders = array_map('transformHeaderLine', $httpResponseHeaders);
         }
     } else {
-        if(!function_exists('curl_init')) {
+        if (!function_exists('curl_init')) {
             throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
         }
 
@@ -325,7 +325,8 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADERFUNCTION, 'handleHeaderLine');
 
-        if (!empty($stream_options['http']['method'])
+        if (
+            !empty($stream_options['http']['method'])
             && $stream_options['http']['method'] == 'POST'
         ) {
             curl_setopt($ch, CURLOPT_POST, 1);
@@ -342,7 +343,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
         $content = curl_exec($ch);
         $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if(!empty($httpStatus)) {
+        if (!empty($httpStatus)) {
             $httpStatus = 'HTTP/1.1 ' . $httpStatus;
         }
         curl_close($ch);
@@ -352,7 +353,6 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $content,
         $httpStatus,
     );
-
 }
 
 function sendHeader($header, $replace = true)

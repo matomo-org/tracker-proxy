@@ -6,7 +6,7 @@ $path = 'index.php';
 
 $SUPPORTED_METHODS = [
     'CoreAdminHome.optOut',
-	'CoreAdminHome.optOutJS'
+    'CoreAdminHome.optOutJS'
 ];
 $VALID_FILES = [
     'plugins/CoreAdminHome/javascripts/optOut.js'
@@ -27,7 +27,8 @@ if (empty($filerequest)) {
     $filerequest = isset($_POST['file']) ? $_POST['file'] : null;
 }
 
-if (!(isset($filerequest) && in_array($filerequest, $VALID_FILES))
+if (
+    !(isset($filerequest) && in_array($filerequest, $VALID_FILES))
     && !(isset($module) && isset($action) && in_array("$module.$action", $SUPPORTED_METHODS))
 ) {
     http_response_code(404);
