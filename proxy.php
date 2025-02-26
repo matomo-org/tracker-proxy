@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Matomo - free/libre analytics platform
  * Matomo Proxy Hide URL
@@ -122,7 +123,6 @@ $url = $MATOMO_URL . $path;
 $url .= http_build_query(array_merge($extraQueryParams, $_GET));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
     $content = sanitizeContent($content);
@@ -130,7 +130,6 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     forwardHeaders($content);
 
     echo $content;
-
 } else {
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
@@ -160,7 +159,7 @@ function sanitizeContent($content)
     $content = str_replace($MATOMO_URL, $PROXY_URL, $content);
     $content = str_replace($matomoHost, $proxyHost, $content);
 
-    if(isset($VALID_FILES)) {
+    if (isset($VALID_FILES)) {
         foreach($VALID_FILES as $filepath) {
             // replace file paths to match the proxy and discard cb
             $content = preg_replace('^' . $filepath . '(\?cb\=[a-z0-9]*)?^', $PROXY_URL . 'matomo-proxy.php?file=' . $filepath, $content);

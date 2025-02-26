@@ -39,7 +39,8 @@ if (isset($_GET['module'], $_GET['action']) && $_GET['module'] == 'CoreAdminHome
 }
 
 // For PHP 5.3 support
-if (!function_exists('http_response_code')) {
+if (!function_exists('http_response_code'))
+{
     function http_response_code($code = null) {
         switch ($code) {
             case 100:
