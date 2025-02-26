@@ -389,8 +389,7 @@ RESPONSE;
             ];
         }
         var_dump($requestOptions);
-        $request = $client->createRequest($method, $matomoUrl . $path . $query, $requestOptions);
-        $response = $client->send($request);
+        $response = $client->request($method, $matomoUrl . $path . $query, $requestOptions);
 
         return $response;
     }
