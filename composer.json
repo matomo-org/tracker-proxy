@@ -10,6 +10,12 @@
             "homepage": "https://matomo.org/team/"
         }
     ],
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/matomo-org/matomo-coding-standards.git"
+        }
+    ],
     "require": {
         "php": ">=7.2"
     },
