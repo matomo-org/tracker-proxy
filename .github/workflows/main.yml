@@ -21,6 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
+          tools: cs2pr
       - name: Update package lists
         run: sudo apt-get update
       - name: Setup PHP
@@ -39,6 +40,8 @@ jobs:
         run: composer update
       - name: Composer install
         run: composer install
+      - name: test
+        run: ls -a
       - name: Check PHP code styles
         id: phpcs
         run: ./vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
