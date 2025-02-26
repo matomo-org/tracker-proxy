@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['5.6','7.0','7.1','7.2','7.3','7.4','8.0','8.1']
+        php-version: ['5.6','7.0','7.1','7.2','7.3','7.4','8.0','8.1','8.4']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,11 +26,11 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          php-version: '${{ matrix.php-version }}'
       - name: Setup Apache
         uses: thunder/apache-shiva-php-action@v1
         with:
-          php-version: '7.4'
+          php-version: '${{ matrix.php-version }}'
           site-directory: ${{ github.workspace }}
           http-port: 8080
       - name: Copy config file
@@ -39,5 +39,11 @@ jobs:
         run: composer update
       - name: Composer install
         run: composer install
+      - name: Check PHP code styles
+        id: phpcs
+        run: ./vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+      - name: Show PHPCS results in PR
+        if: ${{ always() && steps.phpcs.outcome == 'failure' }}
+        run: cs2pr ./phpcs-report.xml
       - name: PHPUnit / PHP ${{ matrix.php-version }}
         run: composer test

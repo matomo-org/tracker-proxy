@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ruleset name="matomo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/squizlabs/php_codesniffer/phpcs.xsd">
+
+    <description>Matomo Core Coding Standard</description>
+
+    <arg name="extensions" value="php" />
+
+    <file>.</file>
+
+    <rule ref="Matomo"></rule>
+
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="400"/>
+        </properties>
+    </rule>
+
+    <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
+        <!-- Allow using multiple classes in one file for tests -->
+    </rule>
+</ruleset>
