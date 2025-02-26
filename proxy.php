@@ -160,7 +160,7 @@ function sanitizeContent($content)
     $content = str_replace($matomoHost, $proxyHost, $content);
 
     if (isset($VALID_FILES)) {
-        foreach($VALID_FILES as $filepath) {
+        foreach ($VALID_FILES as $filepath) {
             // replace file paths to match the proxy and discard cb
             $content = preg_replace('^' . $filepath . '(\?cb\=[a-z0-9]*)?^', $PROXY_URL . 'matomo-proxy.php?file=' . $filepath, $content);
         }
@@ -202,8 +202,9 @@ function getVisitIp()
         'HTTP_CLIENT_IP',
         'HTTP_CF_CONNECTING_IP',
     );
-    foreach($ipKeys as $ipKey) {
-        if (isset($_SERVER[$ipKey])
+    foreach ($ipKeys as $ipKey) {
+        if (
+            isset($_SERVER[$ipKey])
             && filter_var($_SERVER[$ipKey], FILTER_VALIDATE_IP) !== false
         ) {
             return $_SERVER[$ipKey];
@@ -248,11 +249,11 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     $header[] = sprintf("Accept-Language: %s", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', '')));
 
     // NOTE: any changes made to Piwik\Plugins\PrivacyManager\DoNotTrackHeaderChecker must be made here as well
-    if((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')) {
+    if ((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')) {
         $header[] = "X-Do-Not-Track: 1";
     }
 
-    if((isset($_SERVER['HTTP_DNT']) && substr($_SERVER['HTTP_DNT'], 0, 1) === '1')) {
+    if ((isset($_SERVER['HTTP_DNT']) && substr($_SERVER['HTTP_DNT'], 0, 1) === '1')) {
         $header[] = "DNT: 1";
     }
 

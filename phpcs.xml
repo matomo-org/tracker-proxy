@@ -7,7 +7,7 @@
 
     <file>.</file>
 
-  <exclude-pattern>tests/ProxyTest.php</exclude-pattern>
+    <exclude-pattern>tests/*</exclude-pattern>
 
     <rule ref="Matomo"></rule>
 

@@ -7,4 +7,3 @@ define('MATOMO_PROXY_FROM_ENDPOINT', 1);
 $path = 'plugins/HeatmapSessionRecording/configs.php';
 
 include dirname(__FILE__) . '/../../proxy.php';
-
