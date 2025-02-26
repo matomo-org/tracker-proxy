@@ -388,9 +388,9 @@ RESPONSE;
                 'curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6],
             ];
         }
-        var_dump($requestOptions);
         $response = $client->request($method, $matomoUrl . $path . $query, $requestOptions);
 
+        var_dump($response);
         return $response;
     }
 
