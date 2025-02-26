@@ -13,7 +13,6 @@ class ProxyTest extends TestCase
     {
         $response = $this->send();
 
-        var_dump($response->getHeader('Content-Type')[0]);
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
         $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
@@ -39,8 +38,8 @@ class ProxyTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
-        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
-        $this->assertNotNull($response->getHeader('Last-Modified'));
+        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
+        $this->assertNotNull($response->getHeader('Last-Modified')[0]);
     }
 
     /**
@@ -51,7 +50,7 @@ class ProxyTest extends TestCase
         $response = $this->send('foo=bar');
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('image/gif', $response->getHeader('Content-Type'));
+        $this->assertEquals('image/gif', $response->getHeader('Content-Type')[0]);
     }
 
     /**
@@ -241,7 +240,7 @@ TOKEN_AUTH: <token>
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals(131, $response->getHeader('content-length'));
+        $this->assertEquals(131, $response->getHeader('content-length')[0]);
         $this->assertEquals($expected, $responseBody);
     }
 
