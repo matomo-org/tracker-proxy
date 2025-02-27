@@ -22,7 +22,7 @@ jobs:
       - name: Update package lists
         run: sudo apt-get update
       - name: Setup Apache
-        uses: thunder/apache-shiva-php-action@v1
+        uses: thunder/apache-shiva-php-action@81bccd449b62dcf7dae2b33a21749fceeb2401e8
         with:
           php-version: '${{ matrix.php-version }}'
           site-directory: ${{ github.workspace }}
