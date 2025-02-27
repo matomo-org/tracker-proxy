@@ -395,10 +395,10 @@ RESPONSE;
 
     private function getMatomoUrl()
     {
-        $pathConfig = "./config.php";
+        $pathConfig = "../config.php";
         var_dump(dirname(__FILE__));
         if(!file_exists($pathConfig)) {
-            if(file_exists("./config.php.save")) {
+            if(file_exists("../config.php.save")) {
                 throw new Exception("Rename config.php.save to config.php and try again.");
             }
 
@@ -417,9 +417,9 @@ RESPONSE;
 
     private function getProxyUrl()
     {
-        $pathConfig = "./config.php";
+        $pathConfig = "../config.php";
         if(!file_exists($pathConfig)) {
-            if(file_exists("./config.php.save")) {
+            if(file_exists("../config.php.save")) {
                 throw new Exception("Rename config.php.save to config.php and try again.");
             }
 
