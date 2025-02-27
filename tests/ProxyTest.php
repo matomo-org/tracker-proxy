@@ -294,7 +294,7 @@ RESPONSE;
 
     /**
      * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 [reason phrase] Not Found
+     * @expectedExceptionMessage 404 Not Found
      */
     public function test_indexphp_blocked_requests_are_not_proxied()
     {
