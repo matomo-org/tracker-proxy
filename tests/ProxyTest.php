@@ -89,19 +89,11 @@ RESPONSE;
      */
     public function error_should_forward_error_code()
     {
-        try {
-            $this->send('status=404');
-            $this->fail('The proxy did not return a 404 response');
-        } catch (RequestException $e) {
-            $this->assertEquals(404, $e->getResponse()->getStatusCode());
-        }
+        $response = $this->send('status=404');
+        $this->assertEquals(404, $response->getStatusCode());
 
-        try {
-            $this->send('status=500');
-            $this->fail('The proxy did not return a 500 response');
-        } catch (RequestException $e) {
-            $this->assertEquals(500, $e->getResponse()->getStatusCode());
-        }
+        $response = $this->send('status=500');
+        $this->assertEquals(500, $response->getStatusCode());
     }
 
     /**
@@ -292,40 +284,28 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 Not Found
-     */
     public function test_indexphp_blocked_requests_are_not_proxied()
     {
-        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
+        $response = $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 Not Found
-     */
     public function test_indexphp_blocked_post_requests_are_not_proxied()
     {
-        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+        $response = $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 Not Found
-     */
     public function test_indexphp_empty_requests_are_not_proxied()
     {
-        $this->send('', null, null, null, '/matomo-proxy.php');
+        $response = $this->send('', null, null, null, '/matomo-proxy.php');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 Not Found
-     */
     public function test_indexphp_empty_post_requests_are_not_proxied()
     {
-        $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
+        $response = $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
     public function test_proxy_works_with_ipv6_in_header()
