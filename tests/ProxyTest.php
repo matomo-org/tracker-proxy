@@ -15,7 +15,7 @@ class ProxyTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
-        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
+        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
     }
 
     /**
@@ -38,8 +38,8 @@ class ProxyTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
-        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type'));
-        $this->assertNotNull($response->getHeader('Last-Modified'));
+        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
+        $this->assertNotNull($response->getHeader('Last-Modified')[0]);
     }
 
     /**
@@ -50,7 +50,7 @@ class ProxyTest extends TestCase
         $response = $this->send('foo=bar');
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('image/gif', $response->getHeader('Content-Type'));
+        $this->assertEquals('image/gif', $response->getHeader('Content-Type')[0]);
     }
 
     /**
@@ -89,19 +89,11 @@ RESPONSE;
      */
     public function error_should_forward_error_code()
     {
-        try {
-            $this->send('status=404');
-            $this->fail('The proxy did not return a 404 response');
-        } catch (RequestException $e) {
-            $this->assertEquals(404, $e->getResponse()->getStatusCode());
-        }
+        $response = $this->send('status=404');
+        $this->assertEquals(404, $response->getStatusCode());
 
-        try {
-            $this->send('status=500');
-            $this->fail('The proxy did not return a 500 response');
-        } catch (RequestException $e) {
-            $this->assertEquals(500, $e->getResponse()->getStatusCode());
-        }
+        $response = $this->send('status=500');
+        $this->assertEquals(500, $response->getStatusCode());
     }
 
     /**
@@ -114,7 +106,7 @@ RESPONSE;
         // Remove config file -> matomo.php will use the default value 'http://your-matomo-domain.example.org/matomo/'
         rename(__DIR__ . '/../config.php', __DIR__ . '/../config.php.save');
 
-        $this->assertFileNotExists('config.php');
+        $this->assertFalse(file_exists('config.php'), "Failed asserting that file does not exist: config.php");
 
         try {
             $response = $this->send(null, null, $matomoUrl);
@@ -234,13 +226,13 @@ array (
   'debug' => '1',
 )
 HOST: proxy
-URL: http://proxy/
+URL: http://proxy:8080/
 TOKEN_AUTH: <token>
 
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals(132, $response->getHeader('content-length'));
+        $this->assertEquals(131, $response->getHeader('content-length')[0]);
         $this->assertEquals($expected, $responseBody);
     }
 
@@ -292,40 +284,28 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 [reason phrase] Not Found
-     */
     public function test_indexphp_blocked_requests_are_not_proxied()
     {
-        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
+        $response = $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 [reason phrase] Not Found
-     */
     public function test_indexphp_blocked_post_requests_are_not_proxied()
     {
-        $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+        $response = $this->send('module=Something&action=else', null, null, null, '/matomo-proxy.php', 'POST');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 [reason phrase] Not Found
-     */
     public function test_indexphp_empty_requests_are_not_proxied()
     {
-        $this->send('', null, null, null, '/matomo-proxy.php');
+        $response = $this->send('', null, null, null, '/matomo-proxy.php');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
-    /**
-     * @expectedException GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 404 [reason phrase] Not Found
-     */
     public function test_indexphp_empty_post_requests_are_not_proxied()
     {
-        $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
+        $response = $this->send('', null, null, null, '/matomo-proxy.php', 'POST');
+        $this->assertEquals(404, $response->getStatusCode());
     }
 
     public function test_proxy_works_with_ipv6_in_header()
@@ -355,12 +335,9 @@ RESPONSE;
             $matomoUrl = $this->getMatomoUrl();
         }
 
-        if ($forceIpV6) {
-            // on travis, using an ipv6 ip address causes an error when resolving localhost
-            $matomoUrl = str_replace("localhost", "127.0.0.1", $matomoUrl);
-        }
-
-        $client = new Client();
+        $client = new Client([
+            GuzzleHttp\RequestOptions::HTTP_ERRORS => false
+        ]);
 
         if (!$path) {
             $path = '/matomo.php';
@@ -393,9 +370,7 @@ RESPONSE;
                 'curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6],
             ];
         }
-
-        $request = $client->createRequest($method, $matomoUrl . $path . $query, $requestOptions);
-        $response = $client->send($request);
+        $response = $client->request($method, $matomoUrl . $path . $query, $requestOptions);
 
         return $response;
     }
@@ -417,7 +392,7 @@ RESPONSE;
 ");
         }
         require $pathConfig;
-        $MATOMO_URL = str_replace('tests/server/', '', $MATOMO_URL);
+        $MATOMO_URL = str_replace('/tests/server/', '', $MATOMO_URL);
         return $MATOMO_URL;
     }
 

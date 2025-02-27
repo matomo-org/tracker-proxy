@@ -1,0 +1,35 @@
+name: PHPUnit
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['7.2','7.3','7.4','8.0','8.1','8.4']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+      - name: Update package lists
+        run: sudo apt-get update
+      - name: Setup Apache
+        uses: thunder/apache-shiva-php-action@81bccd449b62dcf7dae2b33a21749fceeb2401e8
+        with:
+          php-version: '${{ matrix.php-version }}'
+          site-directory: ${{ github.workspace }}
+          http-port: 8080
+      - name: Copy config file
+        run: cp .github/config.php config.php
+      - name: Composer install
+        run: composer install
+      - name: PHPUnit / PHP ${{ matrix.php-version }}
+        run: composer test

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Matomo - free/libre analytics platform
  * Matomo Proxy Hide URL
@@ -122,7 +123,6 @@ $url = $MATOMO_URL . $path;
 $url .= http_build_query(array_merge($extraQueryParams, $_GET));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
     list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
     $content = sanitizeContent($content);
@@ -130,7 +130,6 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     forwardHeaders($content);
 
     echo $content;
-
 } else {
     // PHP 5.3 and above
     list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
@@ -160,8 +159,8 @@ function sanitizeContent($content)
     $content = str_replace($MATOMO_URL, $PROXY_URL, $content);
     $content = str_replace($matomoHost, $proxyHost, $content);
 
-    if(isset($VALID_FILES)) {
-        foreach($VALID_FILES as $filepath) {
+    if (isset($VALID_FILES)) {
+        foreach ($VALID_FILES as $filepath) {
             // replace file paths to match the proxy and discard cb
             $content = preg_replace('^' . $filepath . '(\?cb\=[a-z0-9]*)?^', $PROXY_URL . 'matomo-proxy.php?file=' . $filepath, $content);
         }
@@ -203,8 +202,9 @@ function getVisitIp()
         'HTTP_CLIENT_IP',
         'HTTP_CF_CONNECTING_IP',
     );
-    foreach($ipKeys as $ipKey) {
-        if (isset($_SERVER[$ipKey])
+    foreach ($ipKeys as $ipKey) {
+        if (
+            isset($_SERVER[$ipKey])
             && filter_var($_SERVER[$ipKey], FILTER_VALIDATE_IP) !== false
         ) {
             return $_SERVER[$ipKey];
@@ -249,11 +249,11 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     $header[] = sprintf("Accept-Language: %s", str_replace(array("\n", "\t", "\r"), "", arrayValue($_SERVER, 'HTTP_ACCEPT_LANGUAGE', '')));
 
     // NOTE: any changes made to Piwik\Plugins\PrivacyManager\DoNotTrackHeaderChecker must be made here as well
-    if((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')) {
+    if ((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')) {
         $header[] = "X-Do-Not-Track: 1";
     }
 
-    if((isset($_SERVER['HTTP_DNT']) && substr($_SERVER['HTTP_DNT'], 0, 1) === '1')) {
+    if ((isset($_SERVER['HTTP_DNT']) && substr($_SERVER['HTTP_DNT'], 0, 1) === '1')) {
         $header[] = "DNT: 1";
     }
 
@@ -289,13 +289,13 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
         $stream_options['http']['content'] = $postBody;
 
-        if(!empty($http_ip_forward_header)) {
+        if (!empty($http_ip_forward_header)) {
             $visitIp = getVisitIp();
             $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
         }
     }
 
-    if($useFopen) {
+    if ($useFopen) {
         $ctx = stream_context_create($stream_options);
 
         if ($DEBUG_PROXY) {
@@ -311,7 +311,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
             $httpResponseHeaders = array_map('transformHeaderLine', $httpResponseHeaders);
         }
     } else {
-        if(!function_exists('curl_init')) {
+        if (!function_exists('curl_init')) {
             throw new Exception("You must either set allow_url_fopen=1 in your PHP configuration, or enable the PHP Curl extension.");
         }
 
@@ -325,7 +325,8 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADERFUNCTION, 'handleHeaderLine');
 
-        if (!empty($stream_options['http']['method'])
+        if (
+            !empty($stream_options['http']['method'])
             && $stream_options['http']['method'] == 'POST'
         ) {
             curl_setopt($ch, CURLOPT_POST, 1);
@@ -342,7 +343,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
 
         $content = curl_exec($ch);
         $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if(!empty($httpStatus)) {
+        if (!empty($httpStatus)) {
             $httpStatus = 'HTTP/1.1 ' . $httpStatus;
         }
         curl_close($ch);
@@ -352,7 +353,6 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         $content,
         $httpStatus,
     );
-
 }
 
 function sendHeader($header, $replace = true)
