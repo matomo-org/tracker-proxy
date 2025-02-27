@@ -29,8 +29,6 @@ jobs:
           http-port: 8080
       - name: Copy config file
         run: cp .github/config.php config.php
-      - name: test
-        run: ls tests/ -a
       - name: Composer install
         run: composer install
       - name: PHPUnit / PHP ${{ matrix.php-version }}
