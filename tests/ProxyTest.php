@@ -114,7 +114,7 @@ RESPONSE;
         // Remove config file -> matomo.php will use the default value 'http://your-matomo-domain.example.org/matomo/'
         rename(__DIR__ . '/../config.php', __DIR__ . '/../config.php.save');
 
-        $this->assertFileNotExists('config.php');
+        $this->assertFalse(file_exists('config.php'), "Failed asserting that file does not exist: config.php");
 
         try {
             $response = $this->send(null, null, $matomoUrl);
@@ -442,10 +442,5 @@ RESPONSE;
 
         // 127.0.0.1 may appear as ::1
         return str_replace('::1', '127.0.0.1', $responseBody);
-    }
-
-    public function assertFileNotExists(string $filename): void
-    {
-        $this->assertFalse(file_exists($filename), "Failed asserting that file does not exist: $filename");
     }
 }
