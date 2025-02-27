@@ -21,14 +21,12 @@ jobs:
           php-version: ${{ matrix.php-version }}
       - name: Update package lists
         run: sudo apt-get update
-      - name: Run PHP server
-        run: php -S localhost:8080 -t ./ > phpd.log 2>&1 &
-#      - name: Setup Apache
-#        uses: thunder/apache-shiva-php-action@v1
-#        with:
-#          php-version: '${{ matrix.php-version }}'
-#          site-directory: ${{ github.workspace }}
-#          http-port: 8080
+      - name: Setup Apache
+        uses: thunder/apache-shiva-php-action@v1
+        with:
+          php-version: '${{ matrix.php-version }}'
+          site-directory: ${{ github.workspace }}
+          http-port: 8080
       - name: Copy config file
         run: cp .github/config.php config.php
       - name: test
