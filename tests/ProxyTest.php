@@ -355,7 +355,9 @@ RESPONSE;
             $matomoUrl = $this->getMatomoUrl();
         }
 
-        $client = new Client();
+        $client = new Client([
+            GuzzleHttp\RequestOptions::HTTP_ERRORS => false
+        ]);
 
         if (!$path) {
             $path = '/matomo.php';
@@ -440,5 +442,10 @@ RESPONSE;
 
         // 127.0.0.1 may appear as ::1
         return str_replace('::1', '127.0.0.1', $responseBody);
+    }
+
+    public function assertFileNotExists(string $filename): void
+    {
+        $this->assertFalse(file_exists($filename), "Failed asserting that file does not exist: $filename");
     }
 }
