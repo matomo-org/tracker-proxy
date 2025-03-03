@@ -15,6 +15,13 @@ if (!defined('MATOMO_PROXY_FROM_ENDPOINT')) {
 // if set to true, will print out more information about request errors so said errors can be more easily debugged.
 $DEBUG_PROXY = false;
 
+if( $DEBUG_PROXY ){
+    error_reporting( E_ALL );
+    ini_set( 'log_errors', 1 );
+    ini_set( 'display_errors', 1 );
+    ini_set( 'error_log', __DIR__ . '/debug-proxy.log' );
+}
+
 // set to true if the target matomo server has a ssl certificate that will fail verification, like when testing.
 $NO_VERIFY_SSL = false;
 
