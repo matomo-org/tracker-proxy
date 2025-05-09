@@ -11,7 +11,7 @@ This is useful for users who track multiple websites on the same Matomo server, 
 To run this properly you will need:
 
 - latest version of Matomo installed on a server (or Matomo Cloud)
-- one or several website(s) to track with this Matomo, for example `http://trackedsite.com`
+- one or several website(s) to track with this Matomo, for example `http://{site_to_be_tracked}`
 - the website to track must run on a server with PHP 5.3 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
@@ -36,12 +36,12 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 | :zap:        Important note about where to install the proxy   |
 |-----------------------------------------|
-| To ensure the highest data accuracy possible, and that your Matomo cookies are set correctly, please install the proxy in your main website domain name and  web server. This proxy should be ideally installed on your webserver directly under `trackedsite.com`. If you installed the proxy in a sub-domain under `analytics.trackedsite.com` then this would cause data to be less accurate. (Why? because if the sub-domain `analytics.trackedsite.com` was to resolve to a CNAME that does _not_ match `trackedsite.com` OR if it was to resolve to A/AAAA addresses that do not match the first half of the A/AAAA addresses running `trackedsite.com`, then the cookies set by the Matomo Tracker Proxy in the response would only have a lifetime of maximum 7 days on Safari >= 16.4.) |
+| To ensure the highest data accuracy possible, and that your Matomo cookies are set correctly, please install the proxy in your main website domain name and  web server. This proxy should be ideally installed on your webserver directly under `{site_to_be_tracked}`. If you installed the proxy in a sub-domain under `analytics.{site_to_be_tracked}` then this would cause data to be less accurate. (Why? because if the sub-domain `analytics.{site_to_be_tracked}` was to resolve to a CNAME that does _not_ match `{site_to_be_tracked}` OR if it was to resolve to A/AAAA addresses that do not match the first half of the A/AAAA addresses running `{site_to_be_tracked}`, then the cookies set by the Matomo Tracker Proxy in the response would only have a lifetime of maximum 7 days on Safari >= 16.4.) |
 
 #### Manual download of `matomo.php`
 
 - download [`matomo.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo.php), download [`piwik.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/piwik.php), [`proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/proxy.php), [`matomo-proxy.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/matomo-proxy.php)  & if you are using the Heatmaps and Session recordings plugin also download [`plugins/HeatmapSessionRecording/configs.php`](https://raw.githubusercontent.com/matomo-org/tracker-proxy/master/plugins/HeatmapSessionRecording/configs.php)
-  to your website root directory, for example at `http://trackedsite.com/matomo.php`, `http://trackedsite.com/piwik.php`, `http://trackedsite.com/proxy.php`, `http://trackedsite.com/matomo-proxy.php` & `http://trackedsite.com/plugins/HeatmapSessionRecording/configs.php`
+  to your website root directory, for example at `http://{site_to_be_tracked}/matomo.php`, `http://{site_to_be_tracked}/piwik.php`, `http://{site_to_be_tracked}/proxy.php`, `http://{site_to_be_tracked}/matomo-proxy.php` & `http://{site_to_be_tracked}/plugins/HeatmapSessionRecording/configs.php`
 - edit the file to set the configuration variables:
     - `$MATOMO_URL` should contain the URL to your Matomo server
     - `$PROXY_URL` should contain the URL to the tracker-proxy server
@@ -49,7 +49,7 @@ You need to install the proxy on the server where your websites are hosted. You 
 
 #### With git
 
-- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at `http://trackedsite.com/matomo/matomo.php`)
+- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at `http://{site_to_be_tracked}/matomo/matomo.php`)
 - copy the configuration template: `cp config.php.example config.php`
 - change the configuration in the newly created `config.php`:
     - `$MATOMO_URL` should contain the URL to your Matomo server
@@ -62,7 +62,7 @@ Be aware that with this method, `matomo.php` and other files are in a `matomo/` 
 
 ### 3. Use the proxy in the Javascript tracker
 
-The proxy file (`http://trackedsite.com/matomo.php`) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (`http://your-matomo-domain.example.org/matomo/`).
+The proxy file (`http://{site_to_be_tracked}/matomo.php`) will be called by the Matomo Javascript tracker instead of calling directly the (secret) Matomo server (`http://your-matomo-domain.example.org/matomo/`).
 
 To achieve this, change the Matomo Javascript Code that is in the footer of your pages:
 
@@ -72,7 +72,7 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
     ```javascript
     [...]
     (function() {
-        var u="//trackedsite.com/";
+        var u="//{site_to_be_tracked}/";
         _paq.push(["setTrackerUrl", u+"matomo.php"]);
         _paq.push(["setSiteId", "tracked-site-id-here"]);
         var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0];
@@ -84,14 +84,14 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
 
     What has changed in this code snippet compared to the normal Matomo code?
 
-    - any reference(s) to the secret Matomo URL are now replaced by your website URL (the proxy). 
+    - any reference(s) to the secret Matomo URL are now replaced by your website URL (the proxy).
     - `matomo.js` becomes `matomo.php` (or `matomo/matomo.php` if you used the *git* method): matomo.php is the proxy script
     - make sure to replace `tracked-site-id-here` with your idsite
     - if the `<noscript>` is present in your tracking code, you can remove it (it contains the secret Matomo URL which you want to hide)
 
 - paste the modified Matomo Javascript code in the pages you wish to track.
 
-This modified Javascript code will then track visits/pages/conversions by calling `trackedsite.com/matomo.php`, which will then automatically call your (hidden) Matomo Server URL.
+This modified Javascript code will then track visits/pages/conversions by calling `{site_to_be_tracked}/matomo.php`, which will then automatically call your (hidden) Matomo Server URL.
 
 At this stage, example.com should be tracked by your Matomo without showing the Matomo server URL. Repeat the step 3. for each website you wish to track in Matomo.
 
@@ -106,12 +106,12 @@ _Note: you can get the opt out iframe from inside the Administration > Privacy >
 
 ### Timeout
 
-By default, the `matomo.php` proxy will wait 5 seconds for the Matomo server to return the response. 
+By default, the `matomo.php` proxy will wait 5 seconds for the Matomo server to return the response.
 You may change this timeout by editing the `$timeout` value in `config.php`.
- 
+
 ### User-Agent
- 
-By default, the `matomo.php` proxy will contact your Matomo server with the User-Agent of the client requesting `matomo.php`. 
+
+By default, the `matomo.php` proxy will contact your Matomo server with the User-Agent of the client requesting `matomo.php`.
 You may force the proxy script to use a particular User-Agent by  editing the `$user_agent` value in `config.php`.
 
 ## Contributing
