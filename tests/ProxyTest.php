@@ -296,6 +296,31 @@ RESPONSE;
         $this->assertEquals(404, $response->getStatusCode());
     }
 
+    public function test_indexphp_requests_with_invalid_file_are_not_proxied_even_if_method_is_allowed()
+    {
+        $response = $this->send(
+            'module=CoreAdminHome&action=optOut&file=plugins/CoreAdminHome/javascripts/notAllowed.js',
+            null,
+            null,
+            null,
+            '/matomo-proxy.php'
+        );
+        $this->assertEquals(404, $response->getStatusCode());
+    }
+
+    public function test_indexphp_post_requests_with_invalid_file_are_not_proxied_even_if_method_is_allowed()
+    {
+        $response = $this->send(
+            'module=CoreAdminHome&action=optOut&file=plugins/CoreAdminHome/javascripts/notAllowed.js',
+            null,
+            null,
+            null,
+            '/matomo-proxy.php',
+            'POST'
+        );
+        $this->assertEquals(404, $response->getStatusCode());
+    }
+
     public function test_indexphp_empty_requests_are_not_proxied()
     {
         $response = $this->send('', null, null, null, '/matomo-proxy.php');
