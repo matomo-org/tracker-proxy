@@ -117,10 +117,16 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
         'cip' => getVisitIp(),
         'token_auth' => $TOKEN_AUTH,
     );
+    $queryParamsToUnset = ['cdt', 'country', 'region', 'city', 'lat', 'long', 'cip', 'token_auth'];
+    foreach ($queryParamsToUnset as $queryParamToUnset) {
+        if (isset($_GET[$queryParamToUnset])) {
+            unset($_GET[$queryParamToUnset]);
+        }
+    }
 }
 
 $url = $MATOMO_URL . $path;
-$url .= http_build_query(array_merge($extraQueryParams, $_GET));
+$url .= http_build_query(array_merge($_GET, $extraQueryParams));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
