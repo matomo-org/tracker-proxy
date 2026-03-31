@@ -117,6 +117,15 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
         'cip' => getVisitIp(),
         'token_auth' => $TOKEN_AUTH,
     );
+
+    if (!isset($_GET['token_auth'])) {
+        $queryParamsToUnset = ['cdt', 'country', 'region', 'city', 'lat', 'long', 'cip'];
+        foreach ($queryParamsToUnset as $queryParamToUnset) {
+            if (isset($_GET[$queryParamToUnset])) {
+                unset($_GET[$queryParamToUnset]);
+            }
+        }
+    }
 }
 
 $url = $MATOMO_URL . $path;
