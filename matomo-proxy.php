@@ -27,10 +27,15 @@ if (empty($filerequest)) {
     $filerequest = isset($_POST['file']) ? $_POST['file'] : null;
 }
 
-if (
-    !(isset($filerequest) && in_array($filerequest, $VALID_FILES))
-    && !(isset($module) && isset($action) && in_array("$module.$action", $SUPPORTED_METHODS))
-) {
+$hasFileRequest = !empty($filerequest);
+$hasSupportedMethod = !empty($module) && !empty($action) && in_array("$module.$action", $SUPPORTED_METHODS, true);
+
+if ($hasFileRequest) {
+    if (!in_array($filerequest, $VALID_FILES, true)) {
+        http_response_code(404);
+        exit;
+    }
+} elseif (!$hasSupportedMethod) {
     http_response_code(404);
     exit;
 }
