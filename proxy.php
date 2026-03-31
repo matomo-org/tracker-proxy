@@ -126,7 +126,7 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
 }
 
 $url = $MATOMO_URL . $path;
-$url .= http_build_query(array_merge($_GET, $extraQueryParams));
+$url .= http_build_query(array_merge($extraQueryParams, $_GET));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
