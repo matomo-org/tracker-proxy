@@ -251,6 +251,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     global $DEBUG_PROXY;
     global $NO_VERIFY_SSL;
     global $http_ip_forward_header;
+    global $TOKEN_AUTH;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -292,7 +293,27 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     // if there's POST data, send our proxy request as a POST
     if (!empty($_POST)) {
         $postBody = file_get_contents("php://input");
+        
+        // Add visitor IP to bulk POST data by setting cip and token_auth in each individual request, just in a single request
+        $data = json_decode($postBody, true);
+        if (isset($data['requests']) && is_array($data['requests'])) {
+            $visitIp = getVisitIp();
 
+            // Add cip and token_auth to each request in the bulk request array
+            foreach ($data['requests'] as &$request) {
+                // Remove leading question mark if present
+                $request = ltrim($request, '?');
+
+                // Add both parameters while preserving the original request string
+                $request = '?' . $request
+                        . '&cip=' . rawurlencode($visitIp)
+                        . '&token_auth=' . rawurlencode($TOKEN_AUTH);
+            }
+
+            // Re-encode as JSON while preserving the original encoding
+            $postBody = json_encode($data, JSON_UNESCAPED_SLASHES);
+        }
+        
         $stream_options['http']['method'] = 'POST';
         $stream_options['http']['header'][] = "Content-type: application/x-www-form-urlencoded";
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
