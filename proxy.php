@@ -124,6 +124,9 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
             if (isset($_GET[$queryParamToUnset])) {
                 unset($_GET[$queryParamToUnset]);
             }
+            if (isset($_POST[$queryParamToUnset])) {
+                unset($_POST[$queryParamToUnset]);
+            }
         }
     }
 }
