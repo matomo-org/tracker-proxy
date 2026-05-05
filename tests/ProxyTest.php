@@ -278,6 +278,37 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_post_requests_preserve_raw_body_when_no_admin_tracking_params_are_removed()
+    {
+        $response = $this->send(
+            'foo=bar&raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            'action_name=hello%20world'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+  'raw_input' => '1',
+)
+array (
+  'action_name' => 'hello world',
+)
+RAW: action_name=hello%20world
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
     public function test_debug_requests_are_scrubbed_properly()
     {
         $response = $this->send('debug=1');

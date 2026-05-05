@@ -288,8 +288,10 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
     if (!empty($_POST)) {
         $postBody = file_get_contents("php://input");
         if (!isset($_GET['token_auth']) && !isset($_POST['token_auth'])) {
-            sanitizeTrackingOverrideParams($_POST);
-            $postBody = http_build_query($_POST);
+            $didSanitizePostParams = sanitizeTrackingOverrideParams($_POST);
+            if ($didSanitizePostParams) {
+                $postBody = http_build_query($_POST);
+            }
         }
 
         $stream_options['http']['method'] = 'POST';
@@ -378,10 +380,14 @@ function arrayValue($array, $key, $value = null)
 
 function sanitizeTrackingOverrideParams(&$params)
 {
+    $didSanitizeParams = false;
     $queryParamsToUnset = ['cdt', 'country', 'region', 'city', 'lat', 'long', 'cip'];
     foreach ($queryParamsToUnset as $queryParamToUnset) {
         if (isset($params[$queryParamToUnset])) {
             unset($params[$queryParamToUnset]);
+            $didSanitizeParams = true;
         }
     }
+
+    return $didSanitizeParams;
 }
