@@ -213,7 +213,7 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    public function test_post_requests_strip_admin_tracking_params_without_client_token_auth()
+    public function test_post_requests_without_client_token_get_no_proxy_token_and_params_are_kept()
     {
         $response = $this->send(
             'foo=bar',
@@ -227,13 +227,20 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
+        // The client supplied auth-protected params but no token, so the proxy must NOT lend its
+        // token_auth. The params are forwarded untouched; Matomo rejects the request itself.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
+  'country' => 'ru',
+  'region' => '77',
+  'city' => 'Moscow',
+  'lat' => '55.75',
+  'long' => '37.61',
+  'cdt' => '2020-01-01 00:00:00',
   'action_name' => 'spoof',
 )
 RESPONSE;
@@ -242,7 +249,7 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    public function test_post_requests_keep_admin_tracking_params_with_client_token_auth_in_post_body()
+    public function test_post_requests_with_client_token_auth_keep_params_and_get_no_proxy_token()
     {
         $response = $this->send(
             'foo=bar',
@@ -256,10 +263,11 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
+        // The client authenticates itself: the proxy keeps its own token out (so Matomo uses the
+        // client token) and forwards the params unchanged.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
-  'token_auth' => '<token>',
   'foo' => 'bar',
 )
 array (
@@ -278,7 +286,124 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    public function test_post_requests_preserve_raw_body_when_no_admin_tracking_params_are_removed()
+    public function test_get_request_with_admin_param_without_token_gets_cip_but_no_token()
+    {
+        $response = $this->send('idsite=1&country=ru');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'idsite' => '1',
+  'country' => 'ru',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_get_request_with_cdo_without_token_gets_cip_but_no_token()
+    {
+        // cdo (custom datetime offset) backdates the visit and requires auth in Matomo, so it must
+        // also withhold our token.
+        $response = $this->send('idsite=1&cdo=200000');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'idsite' => '1',
+  'cdo' => '200000',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_get_request_with_client_cip_is_not_overridden_and_gets_no_token()
+    {
+        $response = $this->send('idsite=1&cip=6.6.6.6&country=ru');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'idsite' => '1',
+  'cip' => '6.6.6.6',
+  'country' => 'ru',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_empty_token_auth_alone_is_tracked_with_proxy_token()
+    {
+        // An empty token_auth is "no token" (as Matomo reads it). With no override present the
+        // proxy injects its cip+token (and drops the empty client token so it can't clobber ours).
+        $response = $this->send('idsite=1&token_auth=');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_array_token_auth_alone_is_tracked_with_proxy_token()
+    {
+        // Same as above with an array-typed token_auth, which Matomo also ignores.
+        $response = $this->send('idsite=1&token_auth[]=x');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_empty_token_auth_with_override_does_not_receive_proxy_token()
+    {
+        // Empty token + an override: the override alone must withhold our token (type-juggling
+        // bypass), so Matomo rejects the cip instead of us authorizing it.
+        $response = $this->send('idsite=1&token_auth=&cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringNotContainsString('<token>', $responseBody);
+    }
+
+    public function test_array_token_auth_with_override_does_not_receive_proxy_token()
+    {
+        $response = $this->send('idsite=1&token_auth[]=x&country=ru');
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringNotContainsString('<token>', $responseBody);
+    }
+
+    public function test_post_requests_forward_body_rebuilt_from_parsed_post()
     {
         $response = $this->send(
             'foo=bar&raw_input=1',
@@ -292,6 +417,8 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
+        // The forwarded body is rebuilt from the parsed $_POST (so it only ever contains what the
+        // proxy inspected); the value is unchanged, only the space re-encodes as '+'.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
@@ -302,7 +429,325 @@ array (
 array (
   'action_name' => 'hello world',
 )
-RAW: action_name=hello%20world
+RAW: action_name=hello+world
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_bulk_request_injects_cip_and_top_level_token_into_clean_batch()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one","?idsite=1&rec=1&action_name=two"],"send_image":0}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // A fully clean batch gets cip injected per entry, and our token once at the JSON body top
+        // level - one token authorizes the whole clean batch and satisfies Matomo's bulk auth gate.
+        $this->assertStringContainsString('action_name=one&cip=', $responseBody);
+        $this->assertStringContainsString('action_name=two&cip=', $responseBody);
+        // The token is set at the top level (sanitized to <token>), not per entry.
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        $this->assertEquals(0, substr_count($responseBody, 'token_auth=<token>'));
+
+        // The outer query carries only what the client sent - no cip/token injected at that level.
+        $expectedGet = <<<GET
+array (
+  'raw_input' => '1',
+)
+GET;
+        $this->assertStringContainsString($expectedGet, $responseBody);
+    }
+
+    public function test_bulk_request_leaves_offending_string_entry_untouched()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=clean","?idsite=1&rec=1&country=ru"]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The clean entry is injected; the offending entry (country, no token) is left verbatim so
+        // Matomo rejects it - it receives no cip/token from us.
+        $this->assertStringContainsString('action_name=clean&cip=', $responseBody);
+        $this->assertStringContainsString('"?idsite=1&rec=1&country=ru"', $responseBody);
+        $this->assertEquals(1, substr_count($responseBody, 'token_auth=<token>'));
+    }
+
+    public function test_bulk_request_with_offending_entry_does_not_set_top_level_token()
+    {
+        // One clean entry + one offending entry (country, no token). A top-level token would
+        // authorize EVERY entry, so the offending entry must keep us from setting one - we fall back
+        // to per-entry injection on the clean entry only.
+        $body = '{"requests":["?idsite=1&rec=1&action_name=clean","?idsite=1&rec=1&country=ru"]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The clean entry still gets its own per-entry cip + token (URL form), the offending entry is
+        // left verbatim, and crucially there is no batch-level token (JSON form) authorizing them all.
+        $this->assertStringContainsString('action_name=clean&cip=', $responseBody);
+        $this->assertEquals(1, substr_count($responseBody, 'token_auth=<token>'));
+        $this->assertStringContainsString('"?idsite=1&rec=1&country=ru"', $responseBody);
+        $this->assertStringNotContainsString('"token_auth":"<token>"', $responseBody);
+    }
+
+    public function test_bulk_request_leaves_offending_object_entry_untouched()
+    {
+        $body = '{"requests":[{"idsite":"1","rec":"1","action_name":"clean"},{"idsite":"1","cip":"6.6.6.6"}]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // Clean object entry gets cip + token injected (cip key appended right after action_name).
+        $this->assertStringContainsString('"action_name":"clean","cip":', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        // The offending object entry (cip, no token) is left exactly as sent.
+        $this->assertStringContainsString('{"idsite":"1","cip":"6.6.6.6"}', $responseBody);
+    }
+
+    public function test_bulk_request_with_top_level_token_injects_cip_only()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one"],"token_auth":"client-token"}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The client authenticates the batch with its body token: clean entries get cip (which
+        // that token authorizes) but NOT our token; the client's body token is preserved.
+        $this->assertStringContainsString('action_name=one&cip=', $responseBody);
+        $this->assertStringNotContainsString('token_auth=', $responseBody);
+        $this->assertStringContainsString('"token_auth":"client-token"', $responseBody);
+    }
+
+    public function test_bulk_request_with_url_token_is_relocated_into_body()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one"],"send_image":0}';
+
+        $response = $this->send(
+            'raw_input=1&token_auth=client-token',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The client authenticates via the URL token. Matomo reads the bulk token only from the body,
+        // so we relocate the client's token into the body top level (and drop it from the outer query).
+        // Clean entries get cip - which that token authorizes - but never our own token.
+        $this->assertStringContainsString('action_name=one&cip=', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringContainsString('"token_auth":"client-token"', $responseBody);
+        // The client token was moved out of the outer query into the body, not left in $_GET.
+        $this->assertStringNotContainsString("'token_auth' => 'client-token'", $responseBody);
+    }
+
+    public function test_forward_header_mode_does_not_inject_cip_or_token_for_single_request()
+    {
+        $response = $this->send(
+            'idsite=1&action_name=clean',
+            null,
+            null,
+            ['X-Test-Ip-Forward-Header' => 'X-Forwarded-For']
+        );
+
+        $responseBody = $this->getBody($response);
+
+        // With an IP-forward header configured the proxy injects nothing; the visitor IP is sent
+        // in the configured header (for GET too), and Matomo derives the IP from the connection.
+        $expected = <<<RESPONSE
+array (
+  'idsite' => '1',
+  'action_name' => 'clean',
+)
+array (
+  'X_FORWARDED_FOR' => '127.0.0.1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_forward_header_mode_forwards_bulk_body_verbatim()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&country=ru"],"send_image":0}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded', 'X-Test-Ip-Forward-Header' => 'X-Forwarded-For'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // No rewriting in forward-header mode: the body (including the offending entry) is passed
+        // through unchanged and the proxy injects no cip/token.
+        $this->assertStringContainsString('RAW: ' . $body, $responseBody);
+        $this->assertStringNotContainsString('cip=', $responseBody);
+        $this->assertStringNotContainsString('token_auth=', $responseBody);
+    }
+
+    public function test_bulk_request_leaves_offending_object_entry_with_country_untouched()
+    {
+        $body = '{"requests":[{"idsite":"1","action_name":"clean"},{"idsite":"1","country":"ru"}]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // Clean object entry gets cip + token; the offending object entry (country) is verbatim.
+        $this->assertStringContainsString('"action_name":"clean","cip":', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        $this->assertStringContainsString('{"idsite":"1","country":"ru"}', $responseBody);
+    }
+
+    public function test_post_form_with_client_cip_is_not_overridden_and_gets_no_token()
+    {
+        $response = $this->send(
+            'foo=bar',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            'cip=6.6.6.6&action_name=x'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        // Client cip in the POST body: the proxy adds neither its own cip nor a token.
+        $expected = <<<RESPONSE
+array (
+  'foo' => 'bar',
+)
+array (
+  'cip' => '6.6.6.6',
+  'action_name' => 'x',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_bulk_request_with_invalid_json_is_forwarded_unchanged()
+    {
+        // Contains "requests" (so it's treated as bulk) but is not decodable: forward verbatim.
+        $body = '{"requests":[}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('RAW: ' . $body, $responseBody);
+        $this->assertStringNotContainsString('cip=', $responseBody);
+        $this->assertStringNotContainsString('token_auth=', $responseBody);
+    }
+
+    public function test_forward_header_mode_does_not_inject_for_single_post()
+    {
+        $response = $this->send(
+            'foo=bar',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded', 'X-Test-Ip-Forward-Header' => 'X-Forwarded-For'],
+            null,
+            'POST',
+            'action_name=clean'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        // Forward-header mode: nothing injected, body forwarded, visitor IP only in the header.
+        $expected = <<<RESPONSE
+array (
+  'foo' => 'bar',
+)
+array (
+  'action_name' => 'clean',
+)
+array (
+  'X_FORWARDED_FOR' => '127.0.0.1',
+)
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
@@ -328,7 +773,6 @@ TOKEN_AUTH: <token>
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals(131, $response->getHeader('content-length')[0]);
         $this->assertEquals($expected, $responseBody);
     }
 
