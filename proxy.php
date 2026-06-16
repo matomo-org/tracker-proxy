@@ -106,6 +106,10 @@ if ((empty($_GET) && empty($_POST)) || (isset($filerequest) && substr($filereque
 }
 @ini_set('magic_quotes_runtime', 0);
 
+// Read the request body once; php://input may not be re-readable on older PHP versions.
+$rawPostBody = file_get_contents("php://input");
+$forwardPostBody = $rawPostBody;
+
 // 2) MATOMO.PHP PROXY: GET parameters found, this is a tracking request, we redirect it to Piwik
 if (strpos($path, '?') === false) {
     $path = $path . '?';
@@ -113,14 +117,42 @@ if (strpos($path, '?') === false) {
 
 $extraQueryParams = array();
 if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
-    $extraQueryParams = array(
-        'cip' => getVisitIp(),
-        'token_auth' => $TOKEN_AUTH,
-    );
+    // Without an IP-forward header, send the visitor IP as `cip` authorized by our token_auth - but
+    // only when the client sent no token_auth or auth-protected param, so we never authorize its override.
+    if (empty($http_ip_forward_header)) {
+        // Same bulk detection as Matomo's Requests::isUsingBulkRequest (both quote variants).
+        $isBulk = $rawPostBody !== ''
+            && (strpos($rawPostBody, '"requests"') !== false || strpos($rawPostBody, "'requests'") !== false);
 
-    if (!isset($_GET['token_auth']) && !isset($_POST['token_auth'])) {
-        sanitizeTrackingOverrideParams($_GET);
+        if ($isBulk) {
+            // Matomo reads the bulk token only from the JSON body, so pass any URL token_auth down to
+            // be relocated there. Only $_GET matters here - for a bulk POST, $_POST is the mangled body.
+            $clientUrlToken = (isset($_GET['token_auth']) && is_string($_GET['token_auth']) && $_GET['token_auth'] !== '')
+                ? $_GET['token_auth']
+                : null;
+            $forwardPostBody = injectVisitIpIntoBulkRequest($rawPostBody, getVisitIp(), $TOKEN_AUTH, $clientUrlToken);
+            // The batch token now lives in the JSON body; never also send one in the forwarded query.
+            unset($_GET['token_auth']);
+        } else {
+            if (!isset($_GET['cip']) && !isset($_POST['cip'])) {
+                $extraQueryParams['cip'] = getVisitIp();
+            }
+            if (!clientProvidesAuthParams($_GET) && !clientProvidesAuthParams($_POST)) {
+                // Drop any empty/array token_auth the client sent so it can't clobber ours when
+                // $_GET is merged below (array_merge lets $_GET win on key collision).
+                unset($_GET['token_auth']);
+                $extraQueryParams['token_auth'] = $TOKEN_AUTH;
+            }
+
+            // Rebuild the body from parsed $_POST, not the raw bytes, so it matches the params our token
+            // decision saw: a param dropped by max_input_vars is absent from both and can't slip past us.
+            if (!empty($_POST)) {
+                $forwardPostBody = http_build_query($_POST);
+            }
+        }
     }
+    // With an IP-forward header set, the visitor IP goes in that header (see getHttpContentAndStatus);
+    // we inject no cip/token and let Matomo apply its own auth rules.
 }
 
 $url = $MATOMO_URL . $path;
@@ -128,7 +160,7 @@ $url .= http_build_query(array_merge($extraQueryParams, $_GET));
 
 if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     // PHP 5.2 breaks with the new 204 status code so we force returning the image every time
-    list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent);
+    list($content, $httpStatus) = getHttpContentAndStatus($url . '&send_image=1', $timeout, $user_agent, $forwardPostBody);
     $content = sanitizeContent($content);
 
     forwardHeaders($content);
@@ -136,7 +168,7 @@ if (version_compare(PHP_VERSION, '5.3.0', '<')) {
     echo $content;
 } else {
     // PHP 5.3 and above
-    list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent);
+    list($content, $httpStatus) = getHttpContentAndStatus($url, $timeout, $user_agent, $forwardPostBody);
     $content = sanitizeContent($content);
 
     forwardHeaders($content);
@@ -159,7 +191,13 @@ function sanitizeContent($content)
     $matomoHost = parse_url($MATOMO_URL, PHP_URL_HOST);
     $proxyHost = parse_url($PROXY_URL, PHP_URL_HOST);
 
-    $content = str_replace($TOKEN_AUTH, '<token>', $content);
+    // Scrub the token in raw and URL-encoded form (we inject it through http_build_query, which
+    // percent-encodes it, so a non-hex token could otherwise be reflected back unscrubbed).
+    $tokenForms = array_unique(array($TOKEN_AUTH, rawurlencode($TOKEN_AUTH), urlencode($TOKEN_AUTH)));
+    foreach ($tokenForms as $tokenForm) {
+        $content = str_replace($tokenForm, '<token>', $content);
+    }
+
     $content = str_replace($MATOMO_URL, $PROXY_URL, $content);
     $content = str_replace($matomoHost, $proxyHost, $content);
 
@@ -240,7 +278,7 @@ function handleHeaderLine($curl, $headerLine)
     return $originalByteCount;
 }
 
-function getHttpContentAndStatus($url, $timeout, $user_agent)
+function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 {
     global $httpResponseHeaders;
     global $DEBUG_PROXY;
@@ -284,25 +322,18 @@ function getHttpContentAndStatus($url, $timeout, $user_agent)
         );
     }
 
+    // Forward the visitor IP via the configured header, for every request method.
+    if (!empty($http_ip_forward_header)) {
+        $visitIp = getVisitIp();
+        $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
+    }
+
     // if there's POST data, send our proxy request as a POST
     if (!empty($_POST)) {
-        $postBody = file_get_contents("php://input");
-        if (!isset($_GET['token_auth']) && !isset($_POST['token_auth'])) {
-            $didSanitizePostParams = sanitizeTrackingOverrideParams($_POST);
-            if ($didSanitizePostParams) {
-                $postBody = http_build_query($_POST);
-            }
-        }
-
         $stream_options['http']['method'] = 'POST';
         $stream_options['http']['header'][] = "Content-type: application/x-www-form-urlencoded";
         $stream_options['http']['header'][] = "Content-Length: " . strlen($postBody);
         $stream_options['http']['content'] = $postBody;
-
-        if (!empty($http_ip_forward_header)) {
-            $visitIp = getVisitIp();
-            $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
-        }
     }
 
     if ($useFopen) {
@@ -378,16 +409,167 @@ function arrayValue($array, $key, $value = null)
     return $value;
 }
 
-function sanitizeTrackingOverrideParams(&$params)
+function clientProvidesAuthParams($params)
 {
-    $didSanitizeParams = false;
-    $queryParamsToUnset = ['cdt', 'country', 'region', 'city', 'lat', 'long', 'cip'];
-    foreach ($queryParamsToUnset as $queryParamToUnset) {
-        if (isset($params[$queryParamToUnset])) {
-            unset($params[$queryParamToUnset]);
-            $didSanitizeParams = true;
+    if (!is_array($params)) {
+        return false;
+    }
+
+    // A non-empty string token_auth counts as client auth, exactly as Matomo reads it; an empty or
+    // array token is ignored by Matomo, so we must not treat it as one either.
+    if (isset($params['token_auth']) && is_string($params['token_auth']) && $params['token_auth'] !== '') {
+        return true;
+    }
+
+    // Params Matomo only honors for an authenticated request. Checked by key presence
+    // (type-agnostic) so it cannot be evaded with array/empty values.
+    $overrideParams = array('cdt', 'cdo', 'country', 'region', 'city', 'lat', 'long', 'cip');
+
+    foreach ($overrideParams as $param) {
+        if (array_key_exists($param, $params)) {
+            return true;
         }
     }
 
-    return $didSanitizeParams;
+    return false;
+}
+
+function withProxyTracking(
+    $params,
+    $visitIp,
+    #[\SensitiveParameter]
+    $tokenAuth,
+    $includeProxyToken
+) {
+    // The entry is clean (no cip of its own), so set the real visitor IP.
+    $params['cip'] = $visitIp;
+
+    // Lend our token only when the caller decided to; otherwise a client token authorizes the cip.
+    if ($includeProxyToken) {
+        $params['token_auth'] = $tokenAuth;
+    }
+
+    return $params;
+}
+
+function bulkEntryProvidesAuthParams($request)
+{
+    // Parse an entry exactly like rewriteBulkEntry(), so the batch scan and the rewrite agree.
+    if (is_string($request)) {
+        $parsedUrl = @parse_url($request);
+        if (empty($parsedUrl['query'])) {
+            return false; // no query: Matomo ignores this entry
+        }
+
+        $params = array();
+        @parse_str($parsedUrl['query'], $params);
+
+        return clientProvidesAuthParams($params);
+    }
+
+    if (is_array($request)) {
+        return clientProvidesAuthParams($request);
+    }
+
+    return false;
+}
+
+function rewriteBulkEntry(
+    $request,
+    $visitIp,
+    #[\SensitiveParameter]
+    $tokenAuth,
+    $includeProxyToken
+) {
+    // Clean entries get our cip (plus our token when $includeProxyToken); an entry with its own auth
+    // params is left untouched for Matomo to reject. Parsing mirrors Matomo's BulkTracking plugin.
+    if (is_string($request)) {
+        $parsedUrl = @parse_url($request);
+        if (empty($parsedUrl['query'])) {
+            return $request; // no query: Matomo ignores this entry
+        }
+
+        $params = array();
+        @parse_str($parsedUrl['query'], $params);
+
+        if (clientProvidesAuthParams($params)) {
+            return $request;
+        }
+
+        return '?' . http_build_query(withProxyTracking($params, $visitIp, $tokenAuth, $includeProxyToken));
+    }
+
+    if (is_array($request)) {
+        if (clientProvidesAuthParams($request)) {
+            return $request;
+        }
+
+        return withProxyTracking($request, $visitIp, $tokenAuth, $includeProxyToken);
+    }
+
+    return $request;
+}
+
+function injectVisitIpIntoBulkRequest(
+    $rawPostBody,
+    $visitIp,
+    #[\SensitiveParameter]
+    $tokenAuth,
+    #[\SensitiveParameter]
+    $clientUrlToken = null
+) {
+    // Strip line breaks before decoding, as Matomo does (Common::sanitizeLineBreaks).
+    $data = json_decode(str_replace(array("\n", "\r"), '', trim($rawPostBody)), true);
+
+    // Not a decodable bulk request: forward unchanged and let Matomo deal with it.
+    if (!is_array($data) || !isset($data['requests']) || !is_array($data['requests'])) {
+        return $rawPostBody;
+    }
+
+    // Read the body token string-only, exactly as Matomo does.
+    $clientHasBodyToken = isset($data['token_auth']) && is_string($data['token_auth']) && $data['token_auth'] !== '';
+    $clientHasUrlToken = $clientUrlToken !== null;
+
+    // Matomo reads the bulk token only from the body. Relocate a URL token there (when the body has
+    // none) so our injected cip is authorized deterministically, not via Matomo's global $_GET fallback.
+    if ($clientHasUrlToken && !$clientHasBodyToken) {
+        $data['token_auth'] = $clientUrlToken;
+        $clientHasBodyToken = true;
+    }
+
+    $clientAuthenticates = $clientHasUrlToken || $clientHasBodyToken;
+
+    // Does any entry carry an auth-protected override param or its own token_auth?
+    $anyOffendingEntry = false;
+    foreach ($data['requests'] as $request) {
+        if (bulkEntryProvidesAuthParams($request)) {
+            $anyOffendingEntry = true;
+            break;
+        }
+    }
+
+    // A top-level token authorizes EVERY entry, so lend ours there only for a fully clean batch with
+    // no client token - then it authorizes nothing but our injected cip, and it also satisfies Matomo's
+    // bulk auth gate (bulk_requests_require_authentication checks each request's top-level token).
+    $useTopLevelProxyToken = !$clientAuthenticates && !$anyOffendingEntry;
+
+    if ($useTopLevelProxyToken) {
+        $data['token_auth'] = $tokenAuth;
+    }
+
+    // Otherwise (mixed batch, no client token) fall back to per-entry tokens on the clean entries;
+    // with a top-level token or client auth, entries get cip only. Per-entry tokens do NOT satisfy
+    // Matomo's bulk auth gate (it checks each request's top-level token), so on a server with
+    // bulk_requests_require_authentication=1 a mixed batch is rejected in full.
+    $includeProxyTokenPerEntry = !$clientAuthenticates && !$useTopLevelProxyToken;
+
+    foreach ($data['requests'] as $index => $request) {
+        $data['requests'][$index] = rewriteBulkEntry($request, $visitIp, $tokenAuth, $includeProxyTokenPerEntry);
+    }
+
+    $encoded = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    // Fall back to the original body if re-encoding fails (e.g. invalid UTF-8 from parse_str),
+    // so a malformed entry can never drop the whole batch.
+    return $encoded === false ? $rawPostBody : $encoded;
 }

@@ -12,7 +12,7 @@ To run this properly you will need:
 
 - latest version of Matomo installed on a server (or Matomo Cloud)
 - one or several website(s) to track with this Matomo, for example `http://{site_to_be_tracked}`
-- the website to track must run on a server with PHP 5.3 or higher
+- the website to track must run on a server with PHP 7.2 or higher
 - PHP must have either the CURL extension enabled or `allow_url_fopen=On`
 
 ## Installation
@@ -114,6 +114,30 @@ You may change this timeout by editing the `$timeout` value in `config.php`.
 By default, the `matomo.php` proxy will contact your Matomo server with the User-Agent of the client requesting `matomo.php`.
 You may force the proxy script to use a particular User-Agent by  editing the `$user_agent` value in `config.php`.
 
+### Visitor IP forwarding
+
+Because the proxy sits between your visitors and Matomo, it has to tell Matomo the real visitor IP — otherwise Matomo would record the proxy's IP. There are two ways this works:
+
+- **Default — via `cip` + `token_auth`:** the proxy sends the visitor IP to Matomo as the `cip` tracking parameter, authorized by the `$TOKEN_AUTH` you configured (this is why the proxy user needs **write** or **admin** permission). Works out of the box with no Matomo-side configuration, for both single requests and bulk requests (the Matomo JavaScript tracker batches several actions into a single bulk request by default).
+- **Header-only — via `$http_ip_forward_header`:** set `$http_ip_forward_header` in `config.php` (for example to `X-Forwarded-For`) to forward the visitor IP in that header instead. In this mode the proxy injects **no** `cip`/`token_auth` at all and relies solely on the header for the visitor IP — so it doesn't even need a write/admin token. **This only works if Matomo is configured to trust the header:** both the web server in front of Matomo (Apache [mod_remoteip](https://httpd.apache.org/docs/2.4/mod/mod_remoteip.html), nginx [realip](https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/)) **and** Matomo's trusted-proxy settings (`proxy_client_headers[]` / `proxy_ips[]` in its `config.ini.php`). If it isn't, Matomo records the proxy's IP for every visitor.
+
+> ⚠️ **Breaking change:** previously `$http_ip_forward_header` was sent *in addition* to `cip`+`token_auth`; the proxy now treats it as the *sole* IP mechanism and injects nothing else. If you already set it, make sure Matomo's trusted-proxy configuration above is in place — otherwise leave it empty to keep using `cip`.
+
+### Auth-protected tracking parameters
+
+Some tracking parameters (`cip`, `cdt`, `cdo`, `country`, `region`, `city`, `lat`, `long`) are only honored by Matomo for an authenticated request. The proxy never lends its `$TOKEN_AUTH` to a request — or to an individual entry of a bulk request — that carries one of these override parameters or its own `token_auth`:
+
+- **Carries an override parameter, no token:** forwarded without the proxy's token, so Matomo rejects/skips it exactly as if it had been sent directly without authentication — rather than being silently tracked with the client-supplied override. To set these parameters legitimately, send your own valid `token_auth`.
+- **Carries its own `token_auth`:** the proxy adds no token of its own and lets the client's token govern. It still forwards the visitor IP as `cip`, so that token must have write access to authorize it (otherwise the request/entry is rejected).
+
+> ⚠️ **Behavior change:** if you add any of these parameters via `appendToTrackingUrl` (or otherwise) without your own `token_auth`, those requests are now **rejected** by Matomo. Previously the proxy stripped the parameter and tracked the rest of the hit; it no longer does. Send a valid `token_auth` if you need these parameters.
+
+> Note: if your Matomo server sets `bulk_requests_require_authentication = 1`, it requires a single batch-level `token_auth` for the whole bulk request. The proxy supplies that batch-level token only when **every** entry in the batch is clean; if any entry carries an override parameter or its own `token_auth`, the proxy withholds it (a batch-level token would wrongly authorize that entry) and Matomo then rejects the **entire** bulk request — clean entries included. Under that configuration, send your own batch-level `token_auth` or avoid mixing override entries into proxied bulk requests.
+
+> Note: bulk tracking requests must be sent with an `application/x-www-form-urlencoded` content type (as the Matomo JavaScript tracker does). Bulk request bodies sent as `application/json` are not forwarded by the proxy.
+
+> Note: the proxy rebuilds the forwarded request from the parameters PHP parsed (`$_GET`/`$_POST`, or the decoded JSON for bulk), so it only ever sends Matomo what it inspected. Make sure the proxy host's PHP `post_max_size` is large enough for your biggest (bulk) tracking requests — a body exceeding it is dropped by PHP and not forwarded.
+
 ## Contributing
 
 If you have found a bug, you are welcome to submit a pull request.
@@ -125,8 +149,15 @@ Before running the tests, create a config.php file w/ the following contents in 
 ```
 <?php
 $MATOMO_URL = 'http://localhost/tests/server/';
+$PROXY_URL = 'http://localhost/';
 $TOKEN_AUTH = 'xyz';
 $timeout = 5;
+
+// Test-only: lets the suite exercise IP-forward-header handling via the X-Test-Ip-Forward-Header
+// request header. Gated on the local test-server URL so a stray copy to production is inert.
+if (strpos($MATOMO_URL, '/tests/server/') !== false && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
+    $http_ip_forward_header = $_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'];
+}
 ```
 
 The tests need a webserver to be pointed to the root of this repository. The simplest way is to just use Vagrant:
@@ -149,4 +180,4 @@ $ composer install
 * Check in phpinfo() that `allow_url_fopen = On`
 * Run: `vendor/bin/phpunit`
 
-Be advised that the tests require at least PHP 5.4 to run, but the proxy itself can run with PHP 5.3.
+Be advised that the proxy and its tests require PHP 7.2 or higher.

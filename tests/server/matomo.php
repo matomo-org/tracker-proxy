@@ -16,8 +16,14 @@ if (!empty($_POST)) {
     var_export($_POST);
 }
 
+// Echo the raw request body so tests can assert on the exact forwarded payload (e.g. bulk
+// requests). Enabled per-request via the `raw_input` query parameter to keep other tests stable.
+if (!empty($_GET['raw_input'])) {
+    echo "\nRAW: " . file_get_contents('php://input');
+}
+
 $headers = array();
-foreach (array('DNT', 'X_DO_NOT_TRACK') as $headerName) {
+foreach (array('DNT', 'X_DO_NOT_TRACK', 'X_FORWARDED_FOR') as $headerName) {
     if (isset($_SERVER['HTTP_' . $headerName])) {
         $headers[$headerName] = $_SERVER['HTTP_' . $headerName];
     }
