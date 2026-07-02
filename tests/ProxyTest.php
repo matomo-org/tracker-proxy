@@ -1062,13 +1062,39 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
-        // A bare '*' entry must not be treated as "allow everything" - it's a no-op, so every
-        // cookie is dropped, same as an explicit empty allowlist.
+        // '*' alone is a no-op, not "allow everything" - all cookies are dropped.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
   'token_auth' => '<token>',
   'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_empty_entry_among_real_entries_is_noop()
+    {
+        $headers = [
+            'Cookie' => 'mtm_consent=1; other=2',
+            // Leading comma produces an empty entry alongside a real one.
+            'X-Test-Cookie-Allowlist' => ',mtm_consent',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // The empty entry is a no-op; 'mtm_consent' still matches normally.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => 'mtm_consent=1',
 )
 RESPONSE;
 
@@ -1086,8 +1112,7 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
-        // '_pk_id*' (prefix) and 'mtm_consent' (exact) are both configured: the prefix-matching
-        // cookie and the exact-matching cookie are kept, 'mtm_consent_removed' and 'other' are not.
+        // Prefix ('_pk_id*') and exact ('mtm_consent') entries combined; only matching cookies survive.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',
@@ -1138,8 +1163,7 @@ RESPONSE;
 
         $responseBody = $this->getBody($response);
 
-        // A misconfigured (non-array) allowlist must fail closed, not open: no cookies are
-        // forwarded rather than silently falling back to forwarding everything.
+        // Non-array allowlist fails closed: no cookies forwarded, not silently forwarding everything.
         $expected = <<<RESPONSE
 array (
   'cip' => '127.0.0.1',

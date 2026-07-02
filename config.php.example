@@ -50,35 +50,24 @@ $user_agent = '';
 //
 $http_ip_forward_header = '';
 
-// By default, the proxy forwards the visitor's entire Cookie header to Matomo unchanged. If your
-// site sets other cookies (session cookies, consent-management cookies, A/B testing tools, etc.)
-// alongside Matomo's, those get forwarded too, which is broader than necessary from a privacy
-// standpoint.
+// By default, the proxy forwards the visitor's entire Cookie header to Matomo unchanged, which
+// also forwards unrelated site cookies (session, consent tools, A/B testing, etc.).
 //
-// Set $COOKIE_ALLOWLIST to restrict what's forwarded to only the cookies Matomo needs. Each entry
-// is matched against the incoming cookie names either as:
-// - an exact name, e.g. 'mtm_consent' matches only a cookie named exactly 'mtm_consent'
-// - a prefix, by ending the entry with '*', e.g. '_pk_id*' matches '_pk_id' AND '_pk_id.1.1fff'
-// Prefix entries are needed for Matomo's default id/session/referrer/custom-variable cookies,
-// since the JavaScript tracker appends a per-site/per-domain suffix to their base name.
-// Matching is case-sensitive.
+// Set $COOKIE_ALLOWLIST to restrict what's forwarded. Each entry matches either an exact name
+// (e.g. 'mtm_consent') or, if it ends with '*', a prefix (e.g. '_pk_id*' matches '_pk_id.1.1fff').
+// Prefix entries are needed for Matomo's id/session/referrer/custom-variable cookies, since the
+// JS tracker appends a per-site/per-domain suffix to their base name. Matching is case-sensitive.
 //
 // Typical Matomo cookie names/prefixes: '_pk_id*', '_pk_ses*', '_pk_ref*', '_pk_cvar*', '_pk_hsr*',
-// 'mtm_consent', 'mtm_consent_removed', 'matomo_ignore'. Check your Matomo's tracker configuration
-// (custom cookie name prefix via setCookieNamePrefix(), enabled plugins, consent settings) to
-// confirm which of these actually apply to your setup — a custom cookie prefix means NONE of the
-// '_pk_*' entries below will match, and enabled tracking plugins may set additional cookies of
-// their own that aren't in this list.
+// 'mtm_consent', 'mtm_consent_removed', 'matomo_ignore'. Check your tracker config first: a custom
+// setCookieNamePrefix() replaces '_pk_*' entirely, and enabled plugins may set cookies of their own.
 //
-// IMPORTANT: leaving this unset (the default) forwards all cookies unchanged, for backward
-// compatibility. Setting it to an empty array ($COOKIE_ALLOWLIST = array();), or to a non-array
-// value by mistake, forwards NO cookies at all (fails closed, not open). A bare '*' or empty-string
-// entry inside the array is a no-op (matches nothing) rather than "allow everything", so a typo
-// can't silently defeat the allowlist.
+// Leaving this unset (the default) forwards all cookies, for backward compatibility. Setting it to
+// an empty array, or to a non-array value by mistake, forwards NO cookies (fails closed). A bare
+// '*' or empty-string entry is a no-op, not "allow everything", so a typo can't defeat the allowlist.
 //
-// Always keep 'matomo_ignore' (or your consent/opt-out cookie) in this list - dropping it silently
-// re-enables tracking for visitors who opted out. A dropped tracking cookie in general doesn't
-// error, it just stops Matomo from recognizing returning visitors, silently inflating visit counts.
-// After configuring this, load a tracked page twice and confirm Matomo logs one visit, not two.
+// Always keep 'matomo_ignore' (or your opt-out cookie) in this list - dropping it silently
+// re-enables tracking for opted-out visitors. A dropped tracking cookie otherwise just stops
+// Matomo recognizing returning visitors, inflating visit counts; verify by loading a page twice.
 //
 // $COOKIE_ALLOWLIST = array('_pk_id*', '_pk_ses*', '_pk_ref*', '_pk_cvar*', '_pk_hsr*', 'mtm_consent', 'mtm_consent_removed', 'matomo_ignore');

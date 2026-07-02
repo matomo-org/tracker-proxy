@@ -281,14 +281,13 @@ function handleHeaderLine($curl, $headerLine)
 function cookieNameIsAllowed($name, $allowlist)
 {
     foreach ($allowlist as $entry) {
+        $entry = trim($entry);
         if ($entry === '' || $entry === '*') {
-            // Skip no-op / accidental match-everything entries so a typo can't silently allow
-            // every cookie through. Any future match-mode added here must keep this guard.
+            // No-op: guards against a typo silently allowing every cookie through.
             continue;
         }
 
-        // A trailing '*' means prefix match (wildcard stripped before comparing); anything else
-        // is matched as an exact name only.
+        // Trailing '*' = prefix match; otherwise exact match only.
         if (substr($entry, -1) === '*') {
             $prefix = substr($entry, 0, -1);
             if (strncmp($name, $prefix, strlen($prefix)) === 0) {
@@ -350,13 +349,10 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
         $cookieHeaderValue = $_SERVER['HTTP_COOKIE'];
         if (isset($COOKIE_ALLOWLIST)) {
             if (!is_array($COOKIE_ALLOWLIST)) {
-                // Fail closed, not open: a misconfigured (non-array) allowlist must not silently
-                // revert to forwarding every cookie unfiltered, which would defeat the whole point
-                // of configuring one.
-                trigger_error(
-                    '$COOKIE_ALLOWLIST must be an array; treating it as empty (no cookies forwarded) until fixed.',
-                    E_USER_WARNING
-                );
+                // Fail closed: a misconfigured allowlist must not silently forward everything
+                // unfiltered. error_log(), not trigger_error(), so this can never leak into the
+                // response body when display_errors is on.
+                error_log('$COOKIE_ALLOWLIST must be an array; treating it as empty (no cookies forwarded) until fixed.');
                 $COOKIE_ALLOWLIST = array();
             }
             $cookieHeaderValue = filterCookieHeader($cookieHeaderValue, $COOKIE_ALLOWLIST);

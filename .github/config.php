@@ -8,24 +8,23 @@ $TOKEN_AUTH = 'xyz';
 
 $timeout = 5;
 
-// Test-only: lets the suite exercise IP-forward-header handling via the X-Test-Ip-Forward-Header
-// request header. Gated on the local test-server URL so a stray copy to production is inert.
-if (strpos($MATOMO_URL, '/tests/server/') !== false && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
+// Test-only request headers (below) let the suite exercise config variations per-request.
+// Gated on the local test-server URL so a stray copy to production is inert.
+$isTestServer = strpos($MATOMO_URL, '/tests/server/') !== false;
+
+// Exercise IP-forward-header handling.
+if ($isTestServer && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
     $http_ip_forward_header = $_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'];
 }
 
-// Test-only: lets the suite exercise cookie-allowlist filtering via the X-Test-Cookie-Allowlist
-// request header (comma-separated allowlist entries; empty value means an explicit empty
-// allowlist). Gated on the local test-server URL so a stray copy to production is inert.
-if (strpos($MATOMO_URL, '/tests/server/') !== false && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
+// Exercise cookie-allowlist filtering (comma-separated entries; empty value = explicit empty allowlist).
+if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
     $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'] === ''
         ? array()
         : explode(',', $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST']);
 }
 
-// Test-only: lets the suite exercise misconfiguration handling (a non-array $COOKIE_ALLOWLIST)
-// via the X-Test-Cookie-Allowlist-Invalid request header. Gated on the local test-server URL so a
-// stray copy to production is inert.
-if (strpos($MATOMO_URL, '/tests/server/') !== false && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
+// Exercise misconfiguration handling (a non-array $COOKIE_ALLOWLIST).
+if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
     $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'];
 }
