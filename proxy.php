@@ -278,12 +278,57 @@ function handleHeaderLine($curl, $headerLine)
     return $originalByteCount;
 }
 
+function cookieNameIsAllowed($name, array $allowlist)
+{
+    foreach ($allowlist as $entry) {
+        if ($entry === '' || $entry === '*') {
+            // Skip no-op / accidental match-everything entries so a typo can't silently allow
+            // every cookie through.
+            continue;
+        }
+
+        if (substr($entry, -1) === '*') {
+            $prefix = substr($entry, 0, -1);
+            if (strncmp($name, $prefix, strlen($prefix)) === 0) {
+                return true;
+            }
+        } elseif ($name === $entry) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function filterCookieHeader($cookieHeaderValue, array $allowlist)
+{
+    $keptPairs = array();
+
+    foreach (explode(';', $cookieHeaderValue) as $segment) {
+        $segment = trim($segment);
+        if ($segment === '') {
+            continue;
+        }
+
+        $parts = explode('=', $segment, 2);
+        $name = $parts[0];
+        $value = isset($parts[1]) ? $parts[1] : '';
+
+        if (cookieNameIsAllowed($name, $allowlist)) {
+            $keptPairs[] = $name . '=' . $value;
+        }
+    }
+
+    return implode('; ', $keptPairs);
+}
+
 function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 {
     global $httpResponseHeaders;
     global $DEBUG_PROXY;
     global $NO_VERIFY_SSL;
     global $http_ip_forward_header;
+    global $COOKIE_ALLOWLIST;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -300,7 +345,13 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
     }
 
     if (isset($_SERVER['HTTP_COOKIE'])) {
-        $header[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
+        $cookieHeaderValue = $_SERVER['HTTP_COOKIE'];
+        if (isset($COOKIE_ALLOWLIST) && is_array($COOKIE_ALLOWLIST)) {
+            $cookieHeaderValue = filterCookieHeader($cookieHeaderValue, $COOKIE_ALLOWLIST);
+        }
+        if ($cookieHeaderValue !== '') {
+            $header[] = "Cookie: " . $cookieHeaderValue;
+        }
     }
 
     $stream_options = array(

@@ -123,6 +123,14 @@ Because the proxy sits between your visitors and Matomo, it has to tell Matomo t
 
 > ⚠️ **Breaking change:** previously `$http_ip_forward_header` was sent *in addition* to `cip`+`token_auth`; the proxy now treats it as the *sole* IP mechanism and injects nothing else. If you already set it, make sure Matomo's trusted-proxy configuration above is in place — otherwise leave it empty to keep using `cip`.
 
+### Cookie forwarding
+
+By default, the proxy forwards the visitor's entire `Cookie` header to Matomo unchanged. If your site also sets other cookies (session, consent-management, A/B testing, etc.) alongside Matomo's, those are forwarded too.
+
+To restrict this, set `$COOKIE_ALLOWLIST` in `config.php` to an array of cookie names. Each entry is matched against the incoming cookie names either as an **exact name** (e.g. `mtm_consent` matches only a cookie named exactly `mtm_consent`) or, if the entry ends with `*`, as a **prefix** (e.g. `_pk_id*` matches both `_pk_id` and `_pk_id.1.1fff`). Prefix entries are needed for Matomo's default id/session/referrer/custom-variable cookies, since the JavaScript tracker appends a per-site/per-domain suffix to their base name. Cookies whose name matches no entry are stripped from the `Cookie` header before the request reaches Matomo. Matching is case-sensitive.
+
+> Note: leaving `$COOKIE_ALLOWLIST` unset keeps today's behavior of forwarding all cookies unchanged. Setting it — even to an empty array — switches the proxy into allowlist mode; an empty array forwards no cookies at all.
+
 ### Auth-protected tracking parameters
 
 Some tracking parameters (`cip`, `cdt`, `cdo`, `country`, `region`, `city`, `lat`, `long`) are only honored by Matomo for an authenticated request. The proxy never lends its `$TOKEN_AUTH` to a request — or to an individual entry of a bulk request — that carries one of these override parameters or its own `token_auth`:
@@ -157,6 +165,15 @@ $timeout = 5;
 // request header. Gated on the local test-server URL so a stray copy to production is inert.
 if (strpos($MATOMO_URL, '/tests/server/') !== false && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
     $http_ip_forward_header = $_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'];
+}
+
+// Test-only: lets the suite exercise cookie-allowlist filtering via the X-Test-Cookie-Allowlist
+// request header (comma-separated allowlist entries; empty value means an explicit empty
+// allowlist). Gated on the local test-server URL so a stray copy to production is inert.
+if (strpos($MATOMO_URL, '/tests/server/') !== false && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
+    $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'] === ''
+        ? array()
+        : explode(',', $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST']);
 }
 ```
 

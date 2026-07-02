@@ -893,6 +893,165 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_cookie_header_forwarded_unchanged_by_default()
+    {
+        $response = $this->send('foo=bar', null, null, ['Cookie' => 'a=1; _pk_id.1.abc=qux']);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => 'a=1; _pk_id.1.abc=qux',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_filters_to_prefix_match()
+    {
+        $headers = [
+            'Cookie' => 'a=1; _pk_id.1.abc=qux; other=2',
+            'X-Test-Cookie-Allowlist' => '_pk_id*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => '_pk_id.1.abc=qux',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_exact_entry_does_not_match_longer_name()
+    {
+        $headers = [
+            'Cookie' => 'mtm_consent=1; mtm_consent_removed=1',
+            'X-Test-Cookie-Allowlist' => 'mtm_consent',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => 'mtm_consent=1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_empty_cookie_allowlist_drops_all_cookies()
+    {
+        $headers = [
+            'Cookie' => 'a=1; _pk_id.1.abc=qux',
+            'X-Test-Cookie-Allowlist' => '',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_is_case_sensitive()
+    {
+        $headers = [
+            'Cookie' => '_PK_ID.1.abc=xyz',
+            'X-Test-Cookie-Allowlist' => '_pk_id*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_value_with_equals_sign_is_preserved()
+    {
+        $headers = [
+            'Cookie' => '_pk_id.1.abc=YWJjZA==',
+            'X-Test-Cookie-Allowlist' => '_pk_id*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => '_pk_id.1.abc=YWJjZA==',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_no_cookie_header_sent_with_allowlist_configured()
+    {
+        $headers = ['X-Test-Cookie-Allowlist' => '_pk_id*'];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
     private function send($query = null, DateTime $modifiedSince = null, $matomoUrl = null, $addHeaders = null, $path = null,
                           $method = 'GET', $body = null, $forceIpV6 = false)
     {
