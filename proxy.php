@@ -278,15 +278,17 @@ function handleHeaderLine($curl, $headerLine)
     return $originalByteCount;
 }
 
-function cookieNameIsAllowed($name, array $allowlist)
+function cookieNameIsAllowed($name, $allowlist)
 {
     foreach ($allowlist as $entry) {
         if ($entry === '' || $entry === '*') {
             // Skip no-op / accidental match-everything entries so a typo can't silently allow
-            // every cookie through.
+            // every cookie through. Any future match-mode added here must keep this guard.
             continue;
         }
 
+        // A trailing '*' means prefix match (wildcard stripped before comparing); anything else
+        // is matched as an exact name only.
         if (substr($entry, -1) === '*') {
             $prefix = substr($entry, 0, -1);
             if (strncmp($name, $prefix, strlen($prefix)) === 0) {
@@ -300,7 +302,7 @@ function cookieNameIsAllowed($name, array $allowlist)
     return false;
 }
 
-function filterCookieHeader($cookieHeaderValue, array $allowlist)
+function filterCookieHeader($cookieHeaderValue, $allowlist)
 {
     $keptPairs = array();
 
@@ -311,8 +313,8 @@ function filterCookieHeader($cookieHeaderValue, array $allowlist)
         }
 
         $parts = explode('=', $segment, 2);
-        $name = $parts[0];
-        $value = isset($parts[1]) ? $parts[1] : '';
+        $name = trim($parts[0]);
+        $value = isset($parts[1]) ? trim($parts[1]) : '';
 
         if (cookieNameIsAllowed($name, $allowlist)) {
             $keptPairs[] = $name . '=' . $value;
@@ -346,7 +348,17 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 
     if (isset($_SERVER['HTTP_COOKIE'])) {
         $cookieHeaderValue = $_SERVER['HTTP_COOKIE'];
-        if (isset($COOKIE_ALLOWLIST) && is_array($COOKIE_ALLOWLIST)) {
+        if (isset($COOKIE_ALLOWLIST)) {
+            if (!is_array($COOKIE_ALLOWLIST)) {
+                // Fail closed, not open: a misconfigured (non-array) allowlist must not silently
+                // revert to forwarding every cookie unfiltered, which would defeat the whole point
+                // of configuring one.
+                trigger_error(
+                    '$COOKIE_ALLOWLIST must be an array; treating it as empty (no cookies forwarded) until fixed.',
+                    E_USER_WARNING
+                );
+                $COOKIE_ALLOWLIST = array();
+            }
             $cookieHeaderValue = filterCookieHeader($cookieHeaderValue, $COOKIE_ALLOWLIST);
         }
         if ($cookieHeaderValue !== '') {

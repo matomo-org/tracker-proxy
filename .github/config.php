@@ -22,3 +22,10 @@ if (strpos($MATOMO_URL, '/tests/server/') !== false && isset($_SERVER['HTTP_X_TE
         ? array()
         : explode(',', $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST']);
 }
+
+// Test-only: lets the suite exercise misconfiguration handling (a non-array $COOKIE_ALLOWLIST)
+// via the X-Test-Cookie-Allowlist-Invalid request header. Gated on the local test-server URL so a
+// stray copy to production is inert.
+if (strpos($MATOMO_URL, '/tests/server/') !== false && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
+    $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'];
+}

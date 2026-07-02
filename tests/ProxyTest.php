@@ -1052,6 +1052,106 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_cookie_allowlist_wildcard_entry_is_treated_as_noop_not_match_all()
+    {
+        $headers = [
+            'Cookie' => 'a=1; _pk_id.1.abc=qux',
+            'X-Test-Cookie-Allowlist' => '*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // A bare '*' entry must not be treated as "allow everything" - it's a no-op, so every
+        // cookie is dropped, same as an explicit empty allowlist.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_with_multiple_mixed_entries()
+    {
+        $headers = [
+            'Cookie' => '_pk_id.1.abc=qux; mtm_consent=1; mtm_consent_removed=1; other=2',
+            'X-Test-Cookie-Allowlist' => '_pk_id*,mtm_consent',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // '_pk_id*' (prefix) and 'mtm_consent' (exact) are both configured: the prefix-matching
+        // cookie and the exact-matching cookie are kept, 'mtm_consent_removed' and 'other' are not.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => '_pk_id.1.abc=qux; mtm_consent=1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_cookie_allowlist_with_whitespace_around_equals_still_matches()
+    {
+        $headers = [
+            'Cookie' => '_pk_id.1.abc = qux',
+            'X-Test-Cookie-Allowlist' => '_pk_id*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+array (
+  'COOKIE' => '_pk_id.1.abc=qux',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_non_array_cookie_allowlist_fails_closed_and_drops_all_cookies()
+    {
+        $headers = [
+            'Cookie' => 'a=1; _pk_id.1.abc=qux',
+            'X-Test-Cookie-Allowlist-Invalid' => '_pk_id*',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // A misconfigured (non-array) allowlist must fail closed, not open: no cookies are
+        // forwarded rather than silently falling back to forwarding everything.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
     private function send($query = null, DateTime $modifiedSince = null, $matomoUrl = null, $addHeaders = null, $path = null,
                           $method = 'GET', $body = null, $forceIpV6 = false)
     {
