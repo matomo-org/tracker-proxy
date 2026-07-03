@@ -49,3 +49,25 @@ $user_agent = '';
 // for nginx see https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/
 //
 $http_ip_forward_header = '';
+
+// By default, the proxy forwards the visitor's entire Cookie header to Matomo unchanged, which
+// also forwards unrelated site cookies (session, consent tools, A/B testing, etc.).
+//
+// Set $COOKIE_ALLOWLIST to restrict what's forwarded. Each entry matches either an exact name
+// (e.g. 'mtm_consent') or, if it ends with '*', a prefix (e.g. '_pk_id*' matches '_pk_id.1.1fff').
+// Prefix entries are needed for Matomo's id/session/referrer/custom-variable cookies, since the
+// JS tracker appends a per-site/per-domain suffix to their base name. Matching is case-sensitive.
+//
+// Typical Matomo cookie names/prefixes: '_pk_id*', '_pk_ses*', '_pk_ref*', '_pk_cvar*', '_pk_hsr*',
+// 'mtm_consent', 'mtm_consent_removed', 'matomo_ignore'. Check your tracker config first: a custom
+// setCookieNamePrefix() replaces '_pk_*' entirely, and enabled plugins may set cookies of their own.
+//
+// Leaving this unset (the default) forwards all cookies, for backward compatibility. Setting it to
+// an empty array, or to a non-array value by mistake, forwards NO cookies (fails closed). A bare
+// '*' or empty-string entry is a no-op, not "allow everything", so a typo can't defeat the allowlist.
+//
+// Always keep 'matomo_ignore' (or your opt-out cookie) in this list - dropping it silently
+// re-enables tracking for opted-out visitors. A dropped tracking cookie otherwise just stops
+// Matomo recognizing returning visitors, inflating visit counts; verify by loading a page twice.
+//
+// $COOKIE_ALLOWLIST = array('_pk_id*', '_pk_ses*', '_pk_ref*', '_pk_cvar*', '_pk_hsr*', 'mtm_consent', 'mtm_consent_removed', 'matomo_ignore');

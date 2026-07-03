@@ -123,6 +123,20 @@ Because the proxy sits between your visitors and Matomo, it has to tell Matomo t
 
 > ⚠️ **Breaking change:** previously `$http_ip_forward_header` was sent *in addition* to `cip`+`token_auth`; the proxy now treats it as the *sole* IP mechanism and injects nothing else. If you already set it, make sure Matomo's trusted-proxy configuration above is in place — otherwise leave it empty to keep using `cip`.
 
+### Cookie forwarding
+
+By default, the proxy forwards the visitor's entire `Cookie` header to Matomo unchanged. If your site also sets other cookies (session, consent-management, A/B testing, etc.) alongside Matomo's, those are forwarded too.
+
+To restrict this, set `$COOKIE_ALLOWLIST` in `config.php` to an array of cookie names. Each entry is matched either as an **exact name** (e.g. `mtm_consent`) or, if it ends with `*`, as a **prefix** (e.g. `_pk_id*` matches both `_pk_id` and `_pk_id.1.1fff`). Prefix entries are needed for Matomo's default id/session/referrer/custom-variable cookies, since the JavaScript tracker appends a per-site/per-domain suffix to their base name. Cookies matching no entry are stripped before the request reaches Matomo. Matching is case-sensitive; a prefix match is a plain string prefix, not delimiter-aware (so `_pk_id*` could in theory also match an unrelated cookie sharing that prefix, though unlikely in practice).
+
+> Note: leaving `$COOKIE_ALLOWLIST` unset keeps today's behavior of forwarding all cookies unchanged. Setting it — even to an empty array — switches the proxy into allowlist mode; an empty array forwards no cookies at all. A bare `*` or empty-string entry is a no-op (matches nothing), not "allow everything", so a stray `array('*')` can't defeat the allowlist.
+
+> ⚠️ **Always keep `matomo_ignore`** (or whatever cookie your Matomo's opt-out/consent setup relies on) in the allowlist. Dropping it silently re-enables tracking for visitors who opted out, with no visible error.
+
+> ⚠️ **Check your Matomo tracker config before copying the example list below.** A custom `setCookieNamePrefix()` replaces `_pk_*` with your own prefix, and enabled plugins (e.g. HeatmapSessionRecording) or third-party tracking code may set additional cookies not covered by the example.
+>
+> A dropped tracking cookie doesn't error — Matomo just stops recognizing returning visitors, silently inflating visit counts. After configuring this, load a tracked page twice and confirm Matomo logs one visit, not two.
+
 ### Auth-protected tracking parameters
 
 Some tracking parameters (`cip`, `cdt`, `cdo`, `country`, `region`, `city`, `lat`, `long`) are only honored by Matomo for an authenticated request. The proxy never lends its `$TOKEN_AUTH` to a request — or to an individual entry of a bulk request — that carries one of these override parameters or its own `token_auth`:
@@ -153,10 +167,25 @@ $PROXY_URL = 'http://localhost/';
 $TOKEN_AUTH = 'xyz';
 $timeout = 5;
 
-// Test-only: lets the suite exercise IP-forward-header handling via the X-Test-Ip-Forward-Header
-// request header. Gated on the local test-server URL so a stray copy to production is inert.
-if (strpos($MATOMO_URL, '/tests/server/') !== false && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
+// Test-only request headers (below) let the suite exercise config variations per-request.
+// Gated on the local test-server URL so a stray copy to production is inert.
+$isTestServer = strpos($MATOMO_URL, '/tests/server/') !== false;
+
+// Exercise IP-forward-header handling.
+if ($isTestServer && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
     $http_ip_forward_header = $_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'];
+}
+
+// Exercise cookie-allowlist filtering (comma-separated entries; empty value = explicit empty allowlist).
+if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
+    $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'] === ''
+        ? array()
+        : explode(',', $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST']);
+}
+
+// Exercise misconfiguration handling (a non-array $COOKIE_ALLOWLIST).
+if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
+    $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'];
 }
 ```
 

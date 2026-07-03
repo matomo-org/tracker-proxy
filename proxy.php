@@ -278,12 +278,58 @@ function handleHeaderLine($curl, $headerLine)
     return $originalByteCount;
 }
 
+function cookieNameIsAllowed($name, $allowlist)
+{
+    foreach ($allowlist as $entry) {
+        $entry = trim($entry);
+        if ($entry === '' || $entry === '*') {
+            // No-op: guards against a typo silently allowing every cookie through.
+            continue;
+        }
+
+        // Trailing '*' = prefix match; otherwise exact match only.
+        if (substr($entry, -1) === '*') {
+            $prefix = substr($entry, 0, -1);
+            if (strncmp($name, $prefix, strlen($prefix)) === 0) {
+                return true;
+            }
+        } elseif ($name === $entry) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function filterCookieHeader($cookieHeaderValue, $allowlist)
+{
+    $keptPairs = array();
+
+    foreach (explode(';', $cookieHeaderValue) as $segment) {
+        $segment = trim($segment);
+        if ($segment === '') {
+            continue;
+        }
+
+        $parts = explode('=', $segment, 2);
+        $name = trim($parts[0]);
+        $value = isset($parts[1]) ? trim($parts[1]) : '';
+
+        if (cookieNameIsAllowed($name, $allowlist)) {
+            $keptPairs[] = $name . '=' . $value;
+        }
+    }
+
+    return implode('; ', $keptPairs);
+}
+
 function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 {
     global $httpResponseHeaders;
     global $DEBUG_PROXY;
     global $NO_VERIFY_SSL;
     global $http_ip_forward_header;
+    global $COOKIE_ALLOWLIST;
 
     $useFopen = @ini_get('allow_url_fopen') == '1';
 
@@ -300,7 +346,20 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
     }
 
     if (isset($_SERVER['HTTP_COOKIE'])) {
-        $header[] = "Cookie: " . $_SERVER['HTTP_COOKIE'];
+        $cookieHeaderValue = $_SERVER['HTTP_COOKIE'];
+        if (isset($COOKIE_ALLOWLIST)) {
+            if (!is_array($COOKIE_ALLOWLIST)) {
+                // Fail closed: a misconfigured allowlist must not silently forward everything
+                // unfiltered. error_log(), not trigger_error(), so this can never leak into the
+                // response body when display_errors is on.
+                error_log('$COOKIE_ALLOWLIST must be an array; treating it as empty (no cookies forwarded) until fixed.');
+                $COOKIE_ALLOWLIST = array();
+            }
+            $cookieHeaderValue = filterCookieHeader($cookieHeaderValue, $COOKIE_ALLOWLIST);
+        }
+        if ($cookieHeaderValue !== '') {
+            $header[] = "Cookie: " . $cookieHeaderValue;
+        }
     }
 
     $stream_options = array(
