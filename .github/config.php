@@ -17,6 +17,11 @@ if ($isTestServer && !empty($_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'])) {
     $http_ip_forward_header = $_SERVER['HTTP_X_TEST_IP_FORWARD_HEADER'];
 }
 
+// Exercise removal of the visitor IP (any truthy value enables it).
+if ($isTestServer && isset($_SERVER['HTTP_X_TEST_REMOVE_VISITOR_IP'])) {
+    $REMOVE_VISITOR_IP = $_SERVER['HTTP_X_TEST_REMOVE_VISITOR_IP'];
+}
+
 // Exercise cookie-allowlist filtering (comma-separated entries; empty value = explicit empty allowlist).
 if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
     $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'] === ''

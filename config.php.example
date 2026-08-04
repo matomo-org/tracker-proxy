@@ -50,6 +50,25 @@ $user_agent = '';
 //
 $http_ip_forward_header = '';
 
+// Set this to true to stop sending the visitor IP to Matomo altogether. The proxy then forwards the
+// placeholder 0.0.0.0 as `cip` instead of the real IP, and $http_ip_forward_header above is ignored.
+// Intended for deployments where the visitor IP must not reach Matomo at all, even before
+// anonymisation. Any non-empty value other than '0' enables it.
+//
+// Your $TOKEN_AUTH is still required: Matomo rejects an unauthenticated `cip` with an HTTP 400 and
+// records nothing at all, so removing the token discards your traffic rather than degrading it.
+//
+// This governs the IP the proxy itself contributes. A request that supplies its own `cip` is left
+// untouched, because Matomo only honors one for an authenticated request - so it is a deliberate
+// choice to track a specific IP. Location parameters a client supplies explicitly (lat, long, city,
+// region, country) are likewise not removed.
+//
+// Impacts: Location and Provider reports become "Unknown", the visitor IP shows as 0.0.0.0, and
+// IP-based exclusions and bot blocking can no longer identify individual visitors. Visit counts also
+// become less accurate for visitors without cookies. See README.md for the full list and for an
+// important warning about the TrackingSpamPrevention plugin.
+$REMOVE_VISITOR_IP = false;
+
 // By default, the proxy forwards the visitor's entire Cookie header to Matomo unchanged, which
 // also forwards unrelated site cookies (session, consent tools, A/B testing, etc.).
 //

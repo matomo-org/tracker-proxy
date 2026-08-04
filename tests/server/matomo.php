@@ -23,7 +23,7 @@ if (!empty($_GET['raw_input'])) {
 }
 
 $headers = array();
-foreach (array('DNT', 'X_DO_NOT_TRACK', 'X_FORWARDED_FOR', 'COOKIE') as $headerName) {
+foreach (array('DNT', 'X_DO_NOT_TRACK', 'X_FORWARDED_FOR', 'X_REAL_IP', 'CLIENT_IP', 'CF_CONNECTING_IP', 'COOKIE') as $headerName) {
     if (isset($_SERVER['HTTP_' . $headerName])) {
         $headers[$headerName] = $_SERVER['HTTP_' . $headerName];
     }

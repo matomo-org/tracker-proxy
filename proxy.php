@@ -54,6 +54,15 @@ if (empty($user_agent)) {
     $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
 
+// If enabled, the visitor IP is never sent to Matomo (see README.md).
+$REMOVE_VISITOR_IP = !empty($REMOVE_VISITOR_IP);
+
+// Removing the visitor IP takes precedence: the header would send it straight back.
+if ($REMOVE_VISITOR_IP && !empty($http_ip_forward_header)) {
+    error_log('$REMOVE_VISITOR_IP is enabled, so $http_ip_forward_header is ignored.');
+    $http_ip_forward_header = '';
+}
+
 // -----------------------------
 // DO NOT MODIFY BELOW THIS LINE
 // -----------------------------
@@ -120,9 +129,10 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
     // Without an IP-forward header, send the visitor IP as `cip` authorized by our token_auth - but
     // only when the client sent no token_auth or auth-protected param, so we never authorize its override.
     if (empty($http_ip_forward_header)) {
-        // Same bulk detection as Matomo's Requests::isUsingBulkRequest (both quote variants).
-        $isBulk = $rawPostBody !== ''
-            && (strpos($rawPostBody, '"requests"') !== false || strpos($rawPostBody, "'requests'") !== false);
+        // Same bulk detection as Matomo's Requests::isUsingBulkRequest, down to its truthy strpos
+        // check: a marker at offset 0 is not bulk there, so it must not be bulk here either.
+        $isBulk = !empty($rawPostBody)
+            && (strpos($rawPostBody, '"requests"') || strpos($rawPostBody, "'requests'"));
 
         if ($isBulk) {
             // Matomo reads the bulk token only from the JSON body, so pass any URL token_auth down to
@@ -130,12 +140,12 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
             $clientUrlToken = (isset($_GET['token_auth']) && is_string($_GET['token_auth']) && $_GET['token_auth'] !== '')
                 ? $_GET['token_auth']
                 : null;
-            $forwardPostBody = injectVisitIpIntoBulkRequest($rawPostBody, getVisitIp(), $TOKEN_AUTH, $clientUrlToken);
+            $forwardPostBody = injectVisitIpIntoBulkRequest($rawPostBody, getVisitIpToForward(), $TOKEN_AUTH, $clientUrlToken);
             // The batch token now lives in the JSON body; never also send one in the forwarded query.
             unset($_GET['token_auth']);
         } else {
             if (!isset($_GET['cip']) && !isset($_POST['cip'])) {
-                $extraQueryParams['cip'] = getVisitIp();
+                $extraQueryParams['cip'] = getVisitIpToForward();
             }
             if (!clientProvidesAuthParams($_GET) && !clientProvidesAuthParams($_POST)) {
                 // Drop any empty/array token_auth the client sent so it can't clobber ours when
@@ -253,6 +263,18 @@ function getVisitIp()
         }
     }
     return arrayValue($_SERVER, 'REMOTE_ADDR');
+}
+
+function getVisitIpToForward()
+{
+    global $REMOVE_VISITOR_IP;
+
+    // Matomo falls back to the connection IP - ours - when cip is empty, so send a placeholder.
+    if ($REMOVE_VISITOR_IP) {
+        return '0.0.0.0';
+    }
+
+    return getVisitIp();
 }
 
 function transformHeaderLine($headerLine)
@@ -383,7 +405,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 
     // Forward the visitor IP via the configured header, for every request method.
     if (!empty($http_ip_forward_header)) {
-        $visitIp = getVisitIp();
+        $visitIp = getVisitIpToForward();
         $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
     }
 
@@ -503,7 +525,7 @@ function withProxyTracking(
     // Unset first so these are always appended last, not left at an existing key's position.
     unset($params['cip'], $params['token_auth']);
 
-    // The entry is clean (no cip of its own), so set the real visitor IP.
+    // The entry is clean (no cip of its own), so set the IP we forward.
     $params['cip'] = $visitIp;
 
     // Lend our token only when the caller decided to; otherwise a client token authorizes the cip.
