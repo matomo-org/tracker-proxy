@@ -1418,6 +1418,32 @@ RESPONSE;
         $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
     }
 
+    public function test_visitor_ip_removal_lets_a_client_token_authorize_the_placeholder()
+    {
+        $headers = [
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&token_auth=client-token', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // The client authenticates, so the proxy withholds its own token - the placeholder it added
+        // is authorized by the client's token instead.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'idsite' => '1',
+  'token_auth' => 'client-token',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
     public function test_visitor_ip_removal_keeps_explicit_location_params()
     {
         $response = $this->send('idsite=1&lat=1&long=2', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
@@ -1570,6 +1596,9 @@ RESPONSE;
         $this->assertStringContainsString('"idsite=1&rec=1&cip=6.6.6.6"', $responseBody);
         $this->assertStringNotContainsString('0.0.0.0', $responseBody);
         $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+        // The batch still counts as clean, so it gets a batch-level token. That authorizes nothing
+        // here: Matomo drops an entry it cannot parse into params before building a request from it.
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
     }
 
     public function test_visitor_ip_removal_bulk_list_entry_gets_placeholder_alongside_its_values()
@@ -1738,10 +1767,17 @@ RESPONSE;
 
     public function test_visitor_ip_removal_still_serves_matomo_js()
     {
-        $response = $this->send(null, null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+        // Smoke test only: the fake matomo.js is a static file, so it cannot echo the headers the
+        // proxy sent. That the option suppresses the IP-forward header on non-tracking requests is
+        // covered by test_visitor_ip_removal_sends_no_ip_header_on_{plugin_config,opt_out}_endpoint.
+        $response = $this->send(null, null, null, [
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ]);
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
+        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
     }
 
     public function test_falsy_remove_visitor_ip_keeps_forwarding_the_visitor_ip()

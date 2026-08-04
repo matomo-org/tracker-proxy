@@ -126,29 +126,20 @@ Because the proxy sits between your visitors and Matomo, it has to tell Matomo t
 
 > ⚠️ **Behavior change:** two cases that previously ended up with no `cip` at all — so Matomo recorded the proxy's IP instead of the visitor's — now send the visitor IP as normal. This applies whether or not `$REMOVE_VISITOR_IP` is set:
 >
-> - a request whose `cip` is empty or array-valued, which Matomo ignores in favour of the connection IP, so the proxy now treats it as absent;
+> - a request whose only `cip` is empty or array-valued, which Matomo ignores in favour of the connection IP, so the proxy now treats it as absent;
 > - a `POST` body in which the bulk marker `"requests"` appears at the very start, which Matomo does not treat as a bulk request — the proxy now agrees with it instead of forwarding the body unprocessed.
 
 ### Removing the visitor IP
 
-Some organisations are required to ensure the visitor IP never reaches the analytics application at all — not even to be anonymised there. Matomo's own IP anonymisation runs inside Matomo, so the full IP arrives there first. Setting `$REMOVE_VISITOR_IP = true;` in `config.php` moves that boundary out to the proxy.
+Set `$REMOVE_VISITOR_IP = true;` in `config.php` to stop sending the visitor IP to Matomo altogether. The proxy forwards `cip=0.0.0.0` in its place — for single and bulk tracking requests alike — and never reads the visitor IP at all, so it cannot leak into a header either.
 
-That is the only setup step — nothing needs to change in Matomo. With the option enabled:
+Use this where the visitor IP must not reach Matomo even to be anonymised there, since Matomo's own IP anonymisation runs inside Matomo and the full IP would otherwise arrive first.
 
-- the proxy sends `cip=0.0.0.0` instead of the visitor IP, for single and bulk tracking requests alike
-- the proxy never reads the visitor IP at all, so it cannot leak it into a header either
-- `$http_ip_forward_header` is ignored, since it would send the IP straight back, and a warning is written to the PHP error log for as long as both are configured — clear `$http_ip_forward_header` to stop it
+Two things to check before you enable it:
 
-> ⚠️ **The write/admin `$TOKEN_AUTH` is still required, and this includes deployments that previously used header-only mode without one.** Matomo only honors `cip` on an authenticated request, and otherwise **records nothing at all** — so removing or downgrading the token discards your data rather than degrading it. Watch out for how that surfaces: a single request is rejected with HTTP 400, but a **bulk** request (what the JavaScript tracker sends by default) comes back as HTTP 200 with `{"status":"success","tracked":0,"invalid":N}`, so there is no error status to alert on.
+> ⚠️ **You still need the write/admin `$TOKEN_AUTH`** — including if you previously ran header-only mode without one. Matomo honors `cip` only on an authenticated request and otherwise records **nothing at all**, so a missing or read-only token discards your traffic instead of degrading it. This is easy to miss: a single request is rejected with HTTP 400, but a bulk request — what the JavaScript tracker sends by default — comes back as HTTP 200 with `{"status":"success","tracked":0,"invalid":N}`.
 
-> Note: the placeholder is `0.0.0.0` rather than no `cip` at all because Matomo falls back to the IP of the connection whenever `cip` is empty. Sending nothing would make Matomo record the proxy's IP and report the proxy's location as though it were real visitor data.
-
-**What this option does not do.** It governs the IP *the proxy contributes*. A request that supplies its own `cip` is forwarded untouched, because Matomo only honors a `cip` on an authenticated request — so such a request is a deliberate decision to track a specific IP, made by something holding a valid token. "Supplies its own `cip`" means a non-empty one: an empty or array-valued `cip` is something Matomo ignores in favour of the connection IP, so the proxy replaces it with the placeholder rather than letting its own IP be recorded. The browser JavaScript tracker never sends `cip` at all, so ordinary visitor traffic is unaffected by this distinction. Two consequences worth knowing:
-
-- If you also want to forbid server-side integrations from submitting IPs, that belongs in those integrations, or in which tokens you issue — the proxy will not overrule them.
-- This assumes Matomo's `tracking_requests_require_authentication` is at its default of `1`. If it has been set to `0`, Matomo honors an unauthenticated `cip`, and then anything could submit an IP.
-
-Explicit location parameters (`lat`, `long`, `city`, `region`, `country`) are likewise not removed — Matomo already requires authentication for those. For cookies that might embed an IP, see [Cookie forwarding](#cookie-forwarding) below; a `Cookie` header is forwarded as-is unless you set `$COOKIE_ALLOWLIST`.
+> ⚠️ **Check TrackingSpamPrevention if you use its limits.** Every visit now reports `0.0.0.0`, so the first visitor to reach its *maximum actions per visit* limit gets `0.0.0.0/32` added to its blocked ranges — after which **every** visit is excluded and tracking stops entirely, silently. Its *included countries* setting behaves the same way, because the country now comes from Matomo's `Accept-Language` guess and is `xx` when it cannot be determined. Both are unset by default. If you use them, add `0.0.0.0` to `iprange_allowlist[]` under `[TrackingSpamPrevention]` in Matomo's `config.ini.php`, add `xx` to the country list, or leave the limits unset.
 
 #### Impact on your Matomo reports
 
@@ -163,9 +154,16 @@ Explicit location parameters (`lat`, `long`, `city`, `region`, `country`) are li
 | Goals, funnels, ecommerce attribution | Affected only where the above merges separate visitors |
 | QueuedTracking | Requests without a visitor ID are sharded by IP, so they all land in one queue instead of being spread across the configured number |
 
-> ⚠️ **TrackingSpamPrevention needs checking before you enable this.** Because every visit now reports `0.0.0.0`, the first visitor to *reach* the plugin's *maximum actions per visit* limit causes `0.0.0.0/32` to be added to its blocked IP ranges — after which **every** visit is excluded and tracking stops entirely, silently. That setting is unlimited by default, so this only bites if it has been changed; if you use it, either unset it or add `0.0.0.0` to `iprange_allowlist[]` under `[TrackingSpamPrevention]` in Matomo's `config.ini.php`.
->
-> The same plugin's *excluded/included countries* settings are affected too: with no usable IP, the country comes from Matomo's `Accept-Language` guess and is `xx` when it cannot be determined. With *included countries* configured and `xx` not among them, every such visit is excluded — the same silent stoppage.
+#### Limits and edge cases
+
+- **The option covers the IP the proxy contributes, not one a caller sends deliberately.** A request supplying its own non-empty `cip` keeps it — the proxy adds neither a `cip` nor a token of its own — because Matomo honors `cip` only for a valid token holder, making such a request a deliberate decision to track a specific IP. The JavaScript tracker never sends `cip`, so ordinary visitor traffic is unaffected. To rule that out too, change those integrations or which tokens you issue; the proxy will not overrule them.
+- An **empty or array-valued `cip`** is not such a decision — Matomo ignores those in favour of the connection IP — so the proxy drops it and sends the placeholder instead. The query string and the POST body are judged together: if a non-empty `cip` appears in either, the request counts as deliberate and neither is touched.
+- **Explicit location parameters** (`lat`, `long`, `city`, `region`, `country`) are not removed either, since Matomo already requires authentication for them.
+- **Cookies** are forwarded unchanged unless you set `$COOKIE_ALLOWLIST` — see [Cookie forwarding](#cookie-forwarding) below.
+- **`$http_ip_forward_header` is ignored** while this is on, since it would send the IP straight back. Clear it to remove the conflict; with `$DEBUG_PROXY` enabled the proxy also notes the conflict in the PHP error log.
+- **The guarantee covers what the proxy sends.** Anything your own infrastructure adds to the outbound request between the proxy and Matomo — a reverse proxy, WAF or egress proxy inserting `X-Forwarded-For`, for example — is outside the proxy's control and needs checking separately.
+- This assumes Matomo's **`tracking_requests_require_authentication`** is at its default of `1`. Set to `0`, Matomo honors an unauthenticated `cip`, so anything could submit an IP.
+- The placeholder is `0.0.0.0` rather than **no `cip` at all** because Matomo falls back to the connection IP whenever `cip` is empty — sending nothing would record the proxy's own IP and report its location as real visitor data.
 
 ### Cookie forwarding
 

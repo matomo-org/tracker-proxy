@@ -50,25 +50,19 @@ $user_agent = '';
 //
 $http_ip_forward_header = '';
 
-// Set this to true to stop sending the visitor IP to Matomo altogether. The proxy then forwards the
-// placeholder 0.0.0.0 as `cip` instead of the real IP, and $http_ip_forward_header above is ignored.
-// Intended for deployments where the visitor IP must not reach Matomo at all, even before
-// anonymisation. Any non-empty value other than '0' enables it.
+// Set this to true to stop sending the visitor IP to Matomo altogether: the proxy forwards the
+// placeholder 0.0.0.0 as `cip` instead, and $http_ip_forward_header above is ignored. Use it where
+// the visitor IP must not reach Matomo at all, not even to be anonymised there.
 //
-// Your $TOKEN_AUTH is still required: Matomo records nothing at all for an unauthenticated `cip`,
-// so removing the token discards your traffic rather than degrading it. A single request is rejected
-// with HTTP 400, but a bulk request - what the JS tracker sends by default - returns HTTP 200 with
-// "tracked":0, so there is no error status to alert on.
+// Your $TOKEN_AUTH is still required. Matomo honors `cip` only on an authenticated request and
+// otherwise records nothing at all, so a missing or read-only token discards your traffic instead of
+// degrading it - and quietly: a single request is rejected with HTTP 400, but a bulk request (what
+// the JS tracker sends by default) returns HTTP 200 with "tracked":0.
 //
-// This governs the IP the proxy itself contributes. A request supplying its own non-empty `cip` is
-// left untouched, because Matomo only honors one for an authenticated request - so it is a
-// deliberate choice to track a specific IP. Location parameters a client supplies explicitly (lat,
-// long, city, region, country) are likewise not removed.
-//
-// Impacts: Location and Provider reports become "Unknown", the visitor IP shows as 0.0.0.0, and
-// IP-based exclusions and bot blocking can no longer identify individual visitors. Visit counts also
-// become less accurate for visitors without cookies. See README.md for the full list and for an
-// important warning about the TrackingSpamPrevention plugin.
+// Location and Provider reports then read "Unknown" and every visit shows 0.0.0.0. Read the impact
+// list in README.md before enabling this: it also covers a TrackingSpamPrevention setting that can
+// stop tracking entirely, and which requests keep their own values (one supplying its own `cip`, and
+// explicit lat/long/city/region/country parameters).
 $REMOVE_VISITOR_IP = false;
 
 // By default, the proxy forwards the visitor's entire Cookie header to Matomo unchanged, which
