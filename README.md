@@ -124,6 +124,11 @@ Because the proxy sits between your visitors and Matomo, it has to tell Matomo t
 
 > ⚠️ **Breaking change:** previously `$http_ip_forward_header` was sent *in addition* to `cip`+`token_auth`; the proxy now treats it as the *sole* IP mechanism and injects nothing else. If you already set it, make sure Matomo's trusted-proxy configuration above is in place — otherwise leave it empty to keep using `cip`.
 
+> ⚠️ **Behavior change:** two cases that previously ended up with no `cip` at all — so Matomo recorded the proxy's IP instead of the visitor's — now send the visitor IP as normal. This applies whether or not `$REMOVE_VISITOR_IP` is set:
+>
+> - a request whose `cip` is empty or array-valued, which Matomo ignores in favour of the connection IP, so the proxy now treats it as absent;
+> - a `POST` body in which the bulk marker `"requests"` appears at the very start, which Matomo does not treat as a bulk request — the proxy now agrees with it instead of forwarding the body unprocessed.
+
 ### Removing the visitor IP
 
 Some organisations are required to ensure the visitor IP never reaches the analytics application at all — not even to be anonymised there. Matomo's own IP anonymisation runs inside Matomo, so the full IP arrives there first. Setting `$REMOVE_VISITOR_IP = true;` in `config.php` moves that boundary out to the proxy.
@@ -181,6 +186,7 @@ To restrict this, set `$COOKIE_ALLOWLIST` in `config.php` to an array of cookie 
 Some tracking parameters (`cip`, `cdt`, `cdo`, `country`, `region`, `city`, `lat`, `long`) are only honored by Matomo for an authenticated request. The proxy never lends its `$TOKEN_AUTH` to a request — or to an individual entry of a bulk request — that carries one of these override parameters or its own `token_auth`:
 
 - **Carries an override parameter, no token:** forwarded without the proxy's token, so Matomo rejects/skips it exactly as if it had been sent directly without authentication — rather than being silently tracked with the client-supplied override. To set these parameters legitimately, send your own valid `token_auth`.
+    - For `cip` this applies to a **non-empty** value only. Matomo ignores an empty or array-valued `cip` and falls back to the IP of the connection, so the proxy treats such a value as no `cip` at all: it is dropped and replaced with the IP the proxy would otherwise have sent.
 - **Carries its own `token_auth`:** the proxy adds no token of its own and lets the client's token govern. It still forwards the visitor IP as `cip`, so that token must have write access to authorize it (otherwise the request/entry is rejected).
 
 > ⚠️ **Behavior change:** if you add any of these parameters via `appendToTrackingUrl` (or otherwise) without your own `token_auth`, those requests are now **rejected** by Matomo. Previously the proxy stripped the parameter and tracked the rest of the hit; it no longer does. Send a valid `token_auth` if you need these parameters.

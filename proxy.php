@@ -54,8 +54,14 @@ if (empty($user_agent)) {
     $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
 
-// If enabled, the visitor IP is never sent to Matomo (see README.md).
-$REMOVE_VISITOR_IP = !empty($REMOVE_VISITOR_IP);
+// Set to true to never send the visitor IP to Matomo, not even an anonymized one
+if (! isset($REMOVE_VISITOR_IP)) {
+    $REMOVE_VISITOR_IP = false;
+}
+
+// -----------------------------
+// DO NOT MODIFY BELOW THIS LINE
+// -----------------------------
 
 // Removing the visitor IP takes precedence: the header would send it straight back. Only reported
 // when debugging - this is a permanent misconfiguration, so logging it per request would flood the
@@ -66,10 +72,6 @@ if ($REMOVE_VISITOR_IP && !empty($http_ip_forward_header)) {
     }
     $http_ip_forward_header = '';
 }
-
-// -----------------------------
-// DO NOT MODIFY BELOW THIS LINE
-// -----------------------------
 
 // the HTTP response headers captured via fopen or curl
 $httpResponseHeaders = array();
