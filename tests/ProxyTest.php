@@ -403,6 +403,45 @@ RESPONSE;
         $this->assertStringNotContainsString('<token>', $responseBody);
     }
 
+    public function test_empty_client_cip_is_replaced_by_the_visitor_ip()
+    {
+        // Matomo reads cip string-only and falls back to the connection IP for an empty value, so an
+        // empty cip is "no cip" - treating it as a client override would record the proxy's own IP.
+        $response = $this->send('idsite=1&cip=');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_array_client_cip_is_replaced_by_the_visitor_ip()
+    {
+        $response = $this->send('idsite=1&cip[]=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
     public function test_post_requests_forward_body_rebuilt_from_parsed_post()
     {
         $response = $this->send(
@@ -1323,23 +1362,59 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
-    public function test_visitor_ip_removal_with_empty_client_cip_injects_no_placeholder()
+    public function test_visitor_ip_removal_replaces_empty_client_cip_with_placeholder()
     {
         $response = $this->send('idsite=1&cip=', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
 
         $responseBody = $this->getBody($response);
 
-        // An empty cip is still a client-supplied cip, so we leave it alone. Matomo treats it as
-        // absent and falls back to the connection IP - the proxy's, never the visitor's.
+        // Matomo ignores an empty cip and falls back to the connection IP - the proxy's - so leaving
+        // it in place would record the proxy's IP and location as the visitor's.
         $expected = <<<RESPONSE
 array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
   'idsite' => '1',
-  'cip' => '',
 )
 RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_array_client_cip_with_placeholder()
+    {
+        $response = $this->send('idsite=1&cip[]=6.6.6.6', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        // Matomo reads cip string-only, so an array value is ignored there too.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_replaces_empty_client_cip_with_placeholder()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one&cip="]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The entry counts as clean, so it gets the placeholder and the batch keeps its top-level
+        // token - an empty cip must not demote the batch to per-entry tokens.
+        $this->assertStringContainsString('cip=0.0.0.0', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
     }
 
     public function test_visitor_ip_removal_keeps_explicit_location_params()

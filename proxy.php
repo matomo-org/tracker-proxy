@@ -57,9 +57,13 @@ if (empty($user_agent)) {
 // If enabled, the visitor IP is never sent to Matomo (see README.md).
 $REMOVE_VISITOR_IP = !empty($REMOVE_VISITOR_IP);
 
-// Removing the visitor IP takes precedence: the header would send it straight back.
+// Removing the visitor IP takes precedence: the header would send it straight back. Only reported
+// when debugging - this is a permanent misconfiguration, so logging it per request would flood the
+// error log of a busy proxy.
 if ($REMOVE_VISITOR_IP && !empty($http_ip_forward_header)) {
-    error_log('$REMOVE_VISITOR_IP is enabled, so $http_ip_forward_header is ignored.');
+    if ($DEBUG_PROXY) {
+        error_log('$REMOVE_VISITOR_IP is enabled, so $http_ip_forward_header is ignored.');
+    }
     $http_ip_forward_header = '';
 }
 
@@ -144,7 +148,10 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
             // The batch token now lives in the JSON body; never also send one in the forwarded query.
             unset($_GET['token_auth']);
         } else {
-            if (!isset($_GET['cip']) && !isset($_POST['cip'])) {
+            if (!clientSuppliesVisitIp($_GET) && !clientSuppliesVisitIp($_POST)) {
+                // Drop an empty/array cip, which Matomo ignores anyway, so it can't clobber ours
+                // when $_GET is merged below (array_merge lets $_GET win on key collision).
+                unset($_GET['cip'], $_POST['cip']);
                 $extraQueryParams['cip'] = getVisitIpToForward();
             }
             if (!clientProvidesAuthParams($_GET) && !clientProvidesAuthParams($_POST)) {
@@ -490,6 +497,16 @@ function arrayValue($array, $key, $value = null)
     return $value;
 }
 
+function clientSuppliesVisitIp($params)
+{
+    // Only a non-empty string cip is read by Matomo; an empty or array value makes it fall back to
+    // the connection IP instead, so we must not treat those as a client-supplied IP either.
+    return is_array($params)
+        && isset($params['cip'])
+        && is_string($params['cip'])
+        && $params['cip'] !== '';
+}
+
 function clientProvidesAuthParams($params)
 {
     if (!is_array($params)) {
@@ -502,9 +519,14 @@ function clientProvidesAuthParams($params)
         return true;
     }
 
+    // Same reasoning for cip, which Matomo also reads string-only.
+    if (clientSuppliesVisitIp($params)) {
+        return true;
+    }
+
     // Params Matomo only honors for an authenticated request. Checked by key presence
     // (type-agnostic) so it cannot be evaded with array/empty values.
-    $overrideParams = array('cdt', 'cdo', 'country', 'region', 'city', 'lat', 'long', 'cip');
+    $overrideParams = array('cdt', 'cdo', 'country', 'region', 'city', 'lat', 'long');
 
     foreach ($overrideParams as $param) {
         if (array_key_exists($param, $params)) {
