@@ -150,7 +150,11 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
             // The batch token now lives in the JSON body; never also send one in the forwarded query.
             unset($_GET['token_auth']);
         } else {
-            if (!clientSuppliesVisitIp($_GET) && !clientSuppliesVisitIp($_POST)) {
+            // Judge the same cip Matomo will read: it resolves tracker params as $_GET + $_POST
+            // (Tracker\RequestSet), so a cip key in the query wins over one in the body whatever
+            // its value. Checking the two separately would let an empty query cip hide behind a
+            // non-empty body cip that Matomo never reads.
+            if (!clientSuppliesVisitIp($_GET + $_POST)) {
                 // Drop an empty/array cip, which Matomo ignores anyway, so it can't clobber ours
                 // when $_GET is merged below (array_merge lets $_GET win on key collision).
                 unset($_GET['cip'], $_POST['cip']);

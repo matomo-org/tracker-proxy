@@ -157,7 +157,7 @@ Two things to check before you enable it:
 #### Limits and edge cases
 
 - **The option covers the IP the proxy contributes, not one a caller sends deliberately.** A request supplying its own non-empty `cip` keeps it — the proxy adds neither a `cip` nor a token of its own — because Matomo honors `cip` only for a valid token holder, making such a request a deliberate decision to track a specific IP. The JavaScript tracker never sends `cip`, so ordinary visitor traffic is unaffected. To rule that out too, change those integrations or which tokens you issue; the proxy will not overrule them.
-- An **empty or array-valued `cip`** is not such a decision — Matomo ignores those in favour of the connection IP — so the proxy drops it and sends the placeholder instead. The query string and the POST body are judged together: if a non-empty `cip` appears in either, the request counts as deliberate and neither is touched.
+- An **empty or array-valued `cip`** is not such a decision — Matomo ignores those in favour of the connection IP — so the proxy drops it and sends the placeholder instead. Matomo resolves `cip` from the query string and the POST body together, with the query winning, and the proxy judges that same effective value.
 - **Explicit location parameters** (`lat`, `long`, `city`, `region`, `country`) are not removed either, since Matomo already requires authentication for them.
 - **Cookies** are forwarded unchanged unless you set `$COOKIE_ALLOWLIST` — see [Cookie forwarding](#cookie-forwarding) below.
 - **`$http_ip_forward_header` is ignored** while this is on, since it would send the IP straight back. Clear it to remove the conflict; with `$DEBUG_PROXY` enabled the proxy also notes the conflict in the PHP error log.

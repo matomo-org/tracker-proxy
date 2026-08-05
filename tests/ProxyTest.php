@@ -192,6 +192,35 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_empty_query_cip_wins_over_a_body_cip_and_is_replaced()
+    {
+        // Matomo resolves tracker params as $_GET + $_POST, so the empty query cip is the one it
+        // would read - the non-empty body cip never reaches it and must not suppress our injection.
+        $response = $this->send(
+            'idsite=1&cip=',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            'cip=6.6.6.6'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
     public function test_post_requests_are_proxied_correctly()
     {
         $response = $this->send('foo=bar', null, null, ['content-type' => 'application/x-www-form-urlencoded'], null, 'POST', 'baz=buz');
@@ -1401,6 +1430,84 @@ RESPONSE;
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $responseBody);
         $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_empty_query_cip_that_wins_over_a_body_cip()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&cip=', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        // Matomo would read the empty query cip and fall back to the connection IP - the proxy's -
+        // so judging the query and body separately would let the body cip hide the gap.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_array_query_cip_that_wins_over_a_body_cip()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&cip[]=1.2.3.4', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('1.2.3.4', $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_keeps_a_body_cip_when_the_query_has_none()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        // With no cip in the query, the body cip is the one Matomo reads, so it counts as deliberate.
+        $expected = <<<RESPONSE
+array (
+  'idsite' => '1',
+)
+array (
+  'cip' => '6.6.6.6',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
     }
 
     public function test_visitor_ip_removal_bulk_replaces_empty_client_cip_with_placeholder()
