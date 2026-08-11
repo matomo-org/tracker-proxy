@@ -500,6 +500,9 @@ function withProxyTracking(
     $tokenAuth,
     $includeProxyToken
 ) {
+    // Unset first so these are always appended last, not left at an existing key's position.
+    unset($params['cip'], $params['token_auth']);
+
     // The entry is clean (no cip of its own), so set the real visitor IP.
     $params['cip'] = $visitIp;
 

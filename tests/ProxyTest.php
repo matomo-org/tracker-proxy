@@ -522,6 +522,57 @@ GET;
         $this->assertStringNotContainsString('"token_auth":"<token>"', $responseBody);
     }
 
+    public function test_bulk_request_injected_entry_token_is_appended_last_even_when_entry_supplies_token_auth_key()
+    {
+        // Clean entry already carries a token_auth key; the offending entry triggers per-entry injection.
+        $body = '{"requests":["?idsite=1&rec=1&action_name=off1&country=ru","?idsite=1&rec=1&token_auth=&action_name=clean&new_visit=1"]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+
+        // The injected token is appended at the end of the entry (immediately before the JSON string
+        // terminator), not at the position the entry's own token_auth key happened to occupy.
+        $this->assertStringContainsString('token_auth=<token>"', $responseBody);
+        $this->assertStringNotContainsString('token_auth=<token>&', $responseBody);
+    }
+
+    public function test_bulk_request_drops_entry_token_auth_key_when_no_per_entry_token_is_injected()
+    {
+        // Fully clean batch: the proxy authorizes it with a single top-level token, so entries get no
+        // per-entry token. A token_auth key already present in an entry is dropped, not left in place.
+        $body = '{"requests":["?idsite=1&rec=1&token_auth=&action_name=clean&new_visit=1"]}';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The batch is authorized once at the top level (JSON form) and the entry gets cip only.
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        $this->assertStringContainsString('action_name=clean&new_visit=1&cip=', $responseBody);
+        // The entry's own token_auth key is dropped: no key=value token_auth survives in any entry.
+        $this->assertStringNotContainsString('token_auth=', $responseBody);
+    }
+
     public function test_bulk_request_leaves_offending_object_entry_untouched()
     {
         $body = '{"requests":[{"idsite":"1","rec":"1","action_name":"clean"},{"idsite":"1","cip":"6.6.6.6"}]}';
