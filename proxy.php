@@ -54,9 +54,24 @@ if (empty($user_agent)) {
     $user_agent = arrayValue($_SERVER, 'HTTP_USER_AGENT', '');
 }
 
+// Set to true to never send the visitor IP to Matomo, not even an anonymized one
+if (! isset($REMOVE_VISITOR_IP)) {
+    $REMOVE_VISITOR_IP = false;
+}
+
 // -----------------------------
 // DO NOT MODIFY BELOW THIS LINE
 // -----------------------------
+
+// Removing the visitor IP takes precedence: the header would send it straight back. Only reported
+// when debugging - this is a permanent misconfiguration, so logging it per request would flood the
+// error log of a busy proxy.
+if ($REMOVE_VISITOR_IP && !empty($http_ip_forward_header)) {
+    if ($DEBUG_PROXY) {
+        error_log('$REMOVE_VISITOR_IP is enabled, so $http_ip_forward_header is ignored.');
+    }
+    $http_ip_forward_header = '';
+}
 
 // the HTTP response headers captured via fopen or curl
 $httpResponseHeaders = array();
@@ -120,9 +135,10 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
     // Without an IP-forward header, send the visitor IP as `cip` authorized by our token_auth - but
     // only when the client sent no token_auth or auth-protected param, so we never authorize its override.
     if (empty($http_ip_forward_header)) {
-        // Same bulk detection as Matomo's Requests::isUsingBulkRequest (both quote variants).
-        $isBulk = $rawPostBody !== ''
-            && (strpos($rawPostBody, '"requests"') !== false || strpos($rawPostBody, "'requests'") !== false);
+        // Same bulk detection as Matomo's Requests::isUsingBulkRequest, down to its truthy strpos
+        // check: a marker at offset 0 is not bulk there, so it must not be bulk here either.
+        $isBulk = !empty($rawPostBody)
+            && (strpos($rawPostBody, '"requests"') || strpos($rawPostBody, "'requests'"));
 
         if ($isBulk) {
             // Matomo reads the bulk token only from the JSON body, so pass any URL token_auth down to
@@ -130,12 +146,19 @@ if (strpos($path, 'piwik.php') === 0 || strpos($path, 'matomo.php') === 0) {
             $clientUrlToken = (isset($_GET['token_auth']) && is_string($_GET['token_auth']) && $_GET['token_auth'] !== '')
                 ? $_GET['token_auth']
                 : null;
-            $forwardPostBody = injectVisitIpIntoBulkRequest($rawPostBody, getVisitIp(), $TOKEN_AUTH, $clientUrlToken);
+            $forwardPostBody = injectVisitIpIntoBulkRequest($rawPostBody, getVisitIpToForward(), $TOKEN_AUTH, $clientUrlToken);
             // The batch token now lives in the JSON body; never also send one in the forwarded query.
             unset($_GET['token_auth']);
         } else {
-            if (!isset($_GET['cip']) && !isset($_POST['cip'])) {
-                $extraQueryParams['cip'] = getVisitIp();
+            // Judge the same cip Matomo will read: it resolves tracker params as $_GET + $_POST
+            // (Tracker\RequestSet), so a cip key in the query wins over one in the body whatever
+            // its value. Checking the two separately would let an empty query cip hide behind a
+            // non-empty body cip that Matomo never reads.
+            if (!clientSuppliesVisitIp($_GET + $_POST)) {
+                // Drop an empty/array cip, which Matomo ignores anyway, so it can't clobber ours
+                // when $_GET is merged below (array_merge lets $_GET win on key collision).
+                unset($_GET['cip'], $_POST['cip']);
+                $extraQueryParams['cip'] = getVisitIpToForward();
             }
             if (!clientProvidesAuthParams($_GET) && !clientProvidesAuthParams($_POST)) {
                 // Drop any empty/array token_auth the client sent so it can't clobber ours when
@@ -253,6 +276,18 @@ function getVisitIp()
         }
     }
     return arrayValue($_SERVER, 'REMOTE_ADDR');
+}
+
+function getVisitIpToForward()
+{
+    global $REMOVE_VISITOR_IP;
+
+    // Matomo falls back to the connection IP - ours - when cip is empty, so send a placeholder.
+    if ($REMOVE_VISITOR_IP) {
+        return '0.0.0.0';
+    }
+
+    return getVisitIp();
 }
 
 function transformHeaderLine($headerLine)
@@ -383,7 +418,7 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
 
     // Forward the visitor IP via the configured header, for every request method.
     if (!empty($http_ip_forward_header)) {
-        $visitIp = getVisitIp();
+        $visitIp = getVisitIpToForward();
         $stream_options['http']['header'][] = "$http_ip_forward_header: $visitIp";
     }
 
@@ -468,6 +503,16 @@ function arrayValue($array, $key, $value = null)
     return $value;
 }
 
+function clientSuppliesVisitIp($params)
+{
+    // Only a non-empty string cip is read by Matomo; an empty or array value makes it fall back to
+    // the connection IP instead, so we must not treat those as a client-supplied IP either.
+    return is_array($params)
+        && isset($params['cip'])
+        && is_string($params['cip'])
+        && $params['cip'] !== '';
+}
+
 function clientProvidesAuthParams($params)
 {
     if (!is_array($params)) {
@@ -480,9 +525,14 @@ function clientProvidesAuthParams($params)
         return true;
     }
 
+    // Same reasoning for cip, which Matomo also reads string-only.
+    if (clientSuppliesVisitIp($params)) {
+        return true;
+    }
+
     // Params Matomo only honors for an authenticated request. Checked by key presence
     // (type-agnostic) so it cannot be evaded with array/empty values.
-    $overrideParams = array('cdt', 'cdo', 'country', 'region', 'city', 'lat', 'long', 'cip');
+    $overrideParams = array('cdt', 'cdo', 'country', 'region', 'city', 'lat', 'long');
 
     foreach ($overrideParams as $param) {
         if (array_key_exists($param, $params)) {
@@ -503,7 +553,7 @@ function withProxyTracking(
     // Unset first so these are always appended last, not left at an existing key's position.
     unset($params['cip'], $params['token_auth']);
 
-    // The entry is clean (no cip of its own), so set the real visitor IP.
+    // The entry is clean (no cip of its own), so set the IP we forward.
     $params['cip'] = $visitIp;
 
     // Lend our token only when the caller decided to; otherwise a client token authorizes the cip.

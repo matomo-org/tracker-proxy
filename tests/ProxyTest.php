@@ -192,6 +192,35 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_empty_query_cip_wins_over_a_body_cip_and_is_replaced()
+    {
+        // Matomo resolves tracker params as $_GET + $_POST, so the empty query cip is the one it
+        // would read - the non-empty body cip never reaches it and must not suppress our injection.
+        $response = $this->send(
+            'idsite=1&cip=',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            'cip=6.6.6.6'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
     public function test_post_requests_are_proxied_correctly()
     {
         $response = $this->send('foo=bar', null, null, ['content-type' => 'application/x-www-form-urlencoded'], null, 'POST', 'baz=buz');
@@ -401,6 +430,45 @@ RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertStringNotContainsString('<token>', $responseBody);
+    }
+
+    public function test_empty_client_cip_is_replaced_by_the_visitor_ip()
+    {
+        // Matomo reads cip string-only and falls back to the connection IP for an empty value, so an
+        // empty cip is "no cip" - treating it as a client override would record the proxy's own IP.
+        $response = $this->send('idsite=1&cip=');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_array_client_cip_is_replaced_by_the_visitor_ip()
+    {
+        $response = $this->send('idsite=1&cip[]=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
     }
 
     public function test_post_requests_forward_body_rebuilt_from_parsed_post()
@@ -1225,6 +1293,670 @@ RESPONSE;
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_sends_placeholder_cip_with_proxy_token()
+    {
+        $response = $this->send('foo=bar', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_ignores_client_ip_headers()
+    {
+        $headers = [
+            'X-Forwarded-For' => '8.8.8.8',
+            'Client-Ip' => '9.9.9.9',
+            'Cf-Connecting-Ip' => '6.6.6.6',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('foo=bar', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // The headers getVisitIp() would have read are neither used nor forwarded, so no header
+        // block is echoed at all.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+        $this->assertStringNotContainsString('9.9.9.9', $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_leaves_a_client_supplied_cip_untouched()
+    {
+        $response = $this->send('idsite=1&cip=6.6.6.6&foo=bar', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        // A client cip needs a valid token_auth of its own to be honored, so it is a deliberate
+        // request to track a specific IP: the proxy adds neither a placeholder nor its token.
+        $expected = <<<RESPONSE
+array (
+  'idsite' => '1',
+  'cip' => '6.6.6.6',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_leaves_a_client_supplied_cip_in_the_post_body_untouched()
+    {
+        $response = $this->send(
+            'foo=bar&raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded', 'X-Test-Remove-Visitor-Ip' => '1'],
+            null,
+            'POST',
+            'cip=6.6.6.6&action_name=x'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'foo' => 'bar',
+  'raw_input' => '1',
+)
+array (
+  'cip' => '6.6.6.6',
+  'action_name' => 'x',
+)
+RAW: cip=6.6.6.6&action_name=x
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_empty_client_cip_with_placeholder()
+    {
+        $response = $this->send('idsite=1&cip=', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        // Matomo ignores an empty cip and falls back to the connection IP - the proxy's - so leaving
+        // it in place would record the proxy's IP and location as the visitor's.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_array_client_cip_with_placeholder()
+    {
+        $response = $this->send('idsite=1&cip[]=6.6.6.6', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        // Matomo reads cip string-only, so an array value is ignored there too.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_empty_query_cip_that_wins_over_a_body_cip()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&cip=', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        // Matomo would read the empty query cip and fall back to the connection IP - the proxy's -
+        // so judging the query and body separately would let the body cip hide the gap.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_replaces_array_query_cip_that_wins_over_a_body_cip()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&cip[]=1.2.3.4', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('1.2.3.4', $responseBody);
+        $this->assertStringNotContainsString('6.6.6.6', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_keeps_a_body_cip_when_the_query_has_none()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1', null, null, $headers, null, 'POST', 'cip=6.6.6.6');
+
+        $responseBody = $this->getBody($response);
+
+        // With no cip in the query, the body cip is the one Matomo reads, so it counts as deliberate.
+        $expected = <<<RESPONSE
+array (
+  'idsite' => '1',
+)
+array (
+  'cip' => '6.6.6.6',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_appends_placeholder_last_over_an_empty_cip_mid_entry()
+    {
+        // The empty cip sits mid-entry, so this is the shape that pins withProxyTracking() unsetting
+        // cip before assigning: without that, the placeholder would be left at the empty key's
+        // position instead of being appended last. Only reachable now that an empty cip counts as
+        // "no cip" - before that, such an entry never reached withProxyTracking() at all.
+        $body = '{"requests":["?idsite=1&rec=1&cip=&action_name=one"]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('?idsite=1&rec=1&action_name=one&cip=0.0.0.0"', $responseBody);
+        $this->assertStringNotContainsString('cip=0.0.0.0&action_name', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_replaces_empty_client_cip_with_placeholder()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one&cip="]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // The entry counts as clean, so it gets the placeholder and the batch keeps its top-level
+        // token - an empty cip must not demote the batch to per-entry tokens.
+        $this->assertStringContainsString('cip=0.0.0.0', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_lets_a_client_token_authorize_the_placeholder()
+    {
+        $headers = [
+            'X-Forwarded-For' => '8.8.8.8',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&token_auth=client-token', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // The client authenticates, so the proxy withholds its own token - the placeholder it added
+        // is authorized by the client's token instead.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'idsite' => '1',
+  'token_auth' => 'client-token',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_keeps_explicit_location_params()
+    {
+        $response = $this->send('idsite=1&lat=1&long=2', null, null, ['X-Test-Remove-Visitor-Ip' => '1']);
+
+        $responseBody = $this->getBody($response);
+
+        // The option removes the IP, not explicitly supplied location parameters.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'idsite' => '1',
+  'lat' => '1',
+  'long' => '2',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_injects_placeholder_and_top_level_token()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=one"],"send_image":0}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('action_name=one&cip=0.0.0.0', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        $this->assertStringNotContainsString('127.0.0.1', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_leaves_an_entry_with_its_own_cip_untouched()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&cip=6.6.6.6"]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // Entry forwarded verbatim and given no token, exactly as without the option.
+        $this->assertStringContainsString('"?idsite=1&rec=1&cip=6.6.6.6"', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_injects_placeholder_only_into_clean_entries()
+    {
+        $body = '{"requests":["?idsite=1&rec=1&action_name=clean","?idsite=1&rec=1&cip=6.6.6.6"]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('action_name=clean&cip=0.0.0.0', $responseBody);
+        $this->assertStringContainsString('"?idsite=1&rec=1&cip=6.6.6.6"', $responseBody);
+        $this->assertStringNotContainsString('127.0.0.1', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_injects_placeholder_into_clean_object_entry()
+    {
+        $body = '{"requests":[{"idsite":"1","rec":"1","action_name":"clean"}]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('"action_name":"clean","cip":"0.0.0.0"', $responseBody);
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+        $this->assertStringNotContainsString('127.0.0.1', $responseBody);
+    }
+
+    public function test_bulk_marker_at_offset_zero_is_not_treated_as_bulk()
+    {
+        // Matomo's Requests::isUsingBulkRequest() uses a truthy strpos check, so a marker at offset
+        // 0 is not a bulk request there. The proxy must agree, or it skips cip injection on a
+        // request Matomo tracks as an ordinary one.
+        $body = '"requests"=x&idsite=1&rec=1';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString("'cip' => '127.0.0.1'", $responseBody);
+        $this->assertStringContainsString("'token_auth' => '<token>'", $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_marker_at_offset_zero_gets_placeholder()
+    {
+        $body = '"requests"=x&idsite=1&rec=1';
+
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            ['content-type' => 'application/x-www-form-urlencoded', 'X-Test-Remove-Visitor-Ip' => '1'],
+            null,
+            'POST',
+            $body
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString("'cip' => '0.0.0.0'", $responseBody);
+        $this->assertStringNotContainsString('127.0.0.1', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_forwards_undecodable_bulk_body_unchanged()
+    {
+        // Documented limitation: a body the proxy cannot decode is passed through as-is (Matomo
+        // cannot parse it either, so it tracks nothing). The proxy must still contribute no token.
+        $body = '{"requests":["?idsite=1&rec=1&cip=6.6.6.6"';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('RAW: ' . $body, $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_leaves_bulk_entry_without_query_unchanged()
+    {
+        // No '?' means no query for either side's parse_url, so Matomo discards the entry. The proxy
+        // must forward it as-is rather than trying to rewrite something it cannot parse.
+        $body = '{"requests":["idsite=1&rec=1&cip=6.6.6.6"]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('"idsite=1&rec=1&cip=6.6.6.6"', $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+        // The batch still counts as clean, so it gets a batch-level token. That authorizes nothing
+        // here: Matomo drops an entry it cannot parse into params before building a request from it.
+        $this->assertStringContainsString('"token_auth":"<token>"', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_bulk_list_entry_gets_placeholder_alongside_its_values()
+    {
+        // A list-typed entry is an array to both sides, so Matomo reads its keys as params: our
+        // placeholder lands under 'cip' and the nested string stays an inert '0' param.
+        $body = '{"requests":[["?idsite=1&rec=1&cip=6.6.6.6"]]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('{"0":"?idsite=1&rec=1&cip=6.6.6.6","cip":"0.0.0.0"}', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_does_not_touch_post_body_on_opt_out_endpoint()
+    {
+        $response = $this->send(
+            'module=CoreAdminHome&action=optOut&raw_input=1',
+            null,
+            null,
+            [
+                'content-type' => 'application/x-www-form-urlencoded',
+                'X-Forwarded-For' => '8.8.8.8',
+                'X-Test-Remove-Visitor-Ip' => '1',
+            ],
+            '/matomo-proxy.php',
+            'POST',
+            'cip=6.6.6.6&other=1'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        // Not a tracking endpoint: the proxy contributes no cip and no token either way, and must
+        // not rewrite the client's body.
+        $this->assertStringContainsString('RAW: cip=6.6.6.6&other=1', $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_does_not_touch_post_body_on_plugin_config_endpoint()
+    {
+        $response = $this->send(
+            'idsite=35&raw_input=1',
+            null,
+            null,
+            [
+                'content-type' => 'application/x-www-form-urlencoded',
+                'X-Forwarded-For' => '8.8.8.8',
+                'X-Test-Remove-Visitor-Ip' => '1',
+            ],
+            '/plugins/HeatmapSessionRecording/configs.php',
+            'POST',
+            'cip=6.6.6.6&other=1'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('RAW: cip=6.6.6.6&other=1', $responseBody);
+        $this->assertStringNotContainsString('0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('<token>', $responseBody);
+        $this->assertStringNotContainsString('8.8.8.8', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_takes_precedence_over_forward_header()
+    {
+        $headers = [
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=1&action_name=clean', null, null, $headers);
+
+        $responseBody = $this->getBody($response);
+
+        // The forward header is ignored, so the proxy is back on the cip path - with the placeholder.
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'idsite' => '1',
+  'action_name' => 'clean',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_takes_precedence_over_forward_header_for_bulk()
+    {
+        $headers = [
+            'content-type' => 'application/x-www-form-urlencoded',
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send(
+            'raw_input=1',
+            null,
+            null,
+            $headers,
+            null,
+            'POST',
+            '{"requests":["?idsite=1&rec=1&action_name=one"]}'
+        );
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('action_name=one&cip=0.0.0.0', $responseBody);
+        $this->assertStringNotContainsString('X_FORWARDED_FOR', $responseBody);
+    }
+
+    public function test_forward_header_mode_sends_ip_header_on_plugin_config_endpoint()
+    {
+        // Baseline for the next test: without removal, the header is forwarded on this endpoint too.
+        $headers = ['X-Test-Ip-Forward-Header' => 'X-Forwarded-For'];
+        $response = $this->send('idsite=35&trackerid=123456', null, null, $headers, '/plugins/HeatmapSessionRecording/configs.php');
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString("'X_FORWARDED_FOR' => '127.0.0.1'", $responseBody);
+    }
+
+    public function test_visitor_ip_removal_sends_no_ip_header_on_plugin_config_endpoint()
+    {
+        $headers = [
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('idsite=35&trackerid=123456', null, null, $headers, '/plugins/HeatmapSessionRecording/configs.php');
+
+        $responseBody = $this->getBody($response);
+
+        // No IP header, and no cip either - this endpoint is not a tracking endpoint.
+        $expected = <<<RESPONSE
+in plugins/HeatmapSessionRecording/configs.php
+array (
+  'idsite' => '35',
+  'trackerid' => '123456',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_visitor_ip_removal_sends_no_ip_header_on_opt_out_endpoint()
+    {
+        $headers = [
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ];
+        $response = $this->send('module=CoreAdminHome&action=optOut', null, null, $headers, '/matomo-proxy.php');
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringNotContainsString('X_FORWARDED_FOR', $responseBody);
+    }
+
+    public function test_visitor_ip_removal_still_serves_matomo_js()
+    {
+        // Smoke test only: the fake matomo.js is a static file, so it cannot echo the headers the
+        // proxy sent. That the option suppresses the IP-forward header on non-tracking requests is
+        // covered by test_visitor_ip_removal_sends_no_ip_header_on_{plugin_config,opt_out}_endpoint.
+        $response = $this->send(null, null, null, [
+            'X-Test-Ip-Forward-Header' => 'X-Forwarded-For',
+            'X-Test-Remove-Visitor-Ip' => '1',
+        ]);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals('this is matomo.js', $response->getBody()->getContents());
+        $this->assertEquals('application/javascript; charset=UTF-8', $response->getHeader('Content-Type')[0]);
+    }
+
+    public function test_falsy_remove_visitor_ip_keeps_forwarding_the_visitor_ip()
+    {
+        $response = $this->send('foo=bar', null, null, ['X-Test-Remove-Visitor-Ip' => '0']);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '127.0.0.1',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    public function test_truthy_string_remove_visitor_ip_enables_removal()
+    {
+        $response = $this->send('foo=bar', null, null, ['X-Test-Remove-Visitor-Ip' => 'yes']);
+
+        $responseBody = $this->getBody($response);
+
+        $expected = <<<RESPONSE
+array (
+  'cip' => '0.0.0.0',
+  'token_auth' => '<token>',
+  'foo' => 'bar',
+)
+RESPONSE;
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals($expected, $responseBody);
+    }
+
+    private function sendBulkWithoutVisitorIp($body)
+    {
+        return $this->send(
+            'raw_input=1',
+            null,
+            null,
+            [
+                'content-type' => 'application/x-www-form-urlencoded',
+                // A visitor IP getVisitIp() would pick up, so the assertions prove the header
+                // sources are bypassed and not merely that REMOTE_ADDR is unused.
+                'X-Forwarded-For' => '8.8.8.8',
+                'X-Test-Remove-Visitor-Ip' => '1',
+            ],
+            null,
+            'POST',
+            $body
+        );
     }
 
     private function send($query = null, DateTime $modifiedSince = null, $matomoUrl = null, $addHeaders = null, $path = null,
