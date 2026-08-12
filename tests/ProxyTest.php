@@ -1510,6 +1510,23 @@ RESPONSE;
         $this->assertStringNotContainsString('<token>', $responseBody);
     }
 
+    public function test_visitor_ip_removal_bulk_appends_placeholder_last_over_an_empty_cip_mid_entry()
+    {
+        // The empty cip sits mid-entry, so this is the shape that pins withProxyTracking() unsetting
+        // cip before assigning: without that, the placeholder would be left at the empty key's
+        // position instead of being appended last. Only reachable now that an empty cip counts as
+        // "no cip" - before that, such an entry never reached withProxyTracking() at all.
+        $body = '{"requests":["?idsite=1&rec=1&cip=&action_name=one"]}';
+
+        $response = $this->sendBulkWithoutVisitorIp($body);
+
+        $responseBody = $this->getBody($response);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertStringContainsString('?idsite=1&rec=1&action_name=one&cip=0.0.0.0"', $responseBody);
+        $this->assertStringNotContainsString('cip=0.0.0.0&action_name', $responseBody);
+    }
+
     public function test_visitor_ip_removal_bulk_replaces_empty_client_cip_with_placeholder()
     {
         $body = '{"requests":["?idsite=1&rec=1&action_name=one&cip="]}';
