@@ -33,3 +33,8 @@ if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
 if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
     $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'];
 }
+
+// Exercise the test server's refusal to run for anything but a test configuration.
+if ($isTestServer && !empty($_SERVER['HTTP_X_TEST_NON_TEST_CONFIG'])) {
+    $MATOMO_URL = 'https://matomo.example.org/matomo/';
+}

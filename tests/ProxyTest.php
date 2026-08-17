@@ -1940,6 +1940,19 @@ RESPONSE;
         $this->assertEquals($expected, $responseBody);
     }
 
+    public function test_test_server_only_runs_for_a_test_configuration()
+    {
+        // X-Test-Non-Test-Config makes the test config point $MATOMO_URL somewhere other than
+        // tests/server/, which is what the test server keys its refusal on.
+        $response = $this->send('debug=1', null, null, ['X-Test-Non-Test-Config' => '1'], '/tests/server/matomo.php');
+
+        $responseBody = $response->getBody()->getContents();
+
+        $this->assertEquals(403, $response->getStatusCode(), $responseBody);
+        $this->assertStringNotContainsString('xyz', $responseBody);
+        $this->assertStringNotContainsString('matomo.example.org', $responseBody);
+    }
+
     private function sendBulkWithoutVisitorIp($body)
     {
         return $this->send(

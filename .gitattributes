@@ -1,0 +1,14 @@
+# Files that are only needed to develop or test the proxy. `export-ignore` keeps them out of
+# `git archive` output and out of the source archives GitHub attaches to releases, so that a
+# release download contains only the files that belong in a public web root.
+#
+# Note that this does NOT apply to `git clone` - a clone always contains everything, which is
+# why the README documents the release archive as the way to install the proxy.
+/tests          export-ignore
+/.github        export-ignore
+/.editorconfig  export-ignore
+/.gitattributes export-ignore
+/.gitignore     export-ignore
+/.php-version   export-ignore
+/composer.lock  export-ignore
+/phpcs.xml      export-ignore
