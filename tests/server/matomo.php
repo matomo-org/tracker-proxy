@@ -1,10 +1,26 @@
 <?php
 
-require_once __DIR__ . '/../../config.php';
+if (file_exists(__DIR__ . '/../../config.php')) {
+    require_once __DIR__ . '/../../config.php';
+}
+
+// This file is a stand-in for a Matomo server, only ever meaningful together with the test
+// configuration the test suite sets up. Run it only when the loaded config actually points at
+// this test server, so that it stays inert in any other setup.
+if (!isset($MATOMO_URL) || !is_string($MATOMO_URL) || strpos($MATOMO_URL, '/tests/server/') === false) {
+    header('Content-Type: text/plain; charset=utf-8');
+    header('X-Content-Type-Options: nosniff');
+    http_response_code(403);
+    exit("This is a test fixture. It is disabled unless \$MATOMO_URL points at tests/server/.\n");
+}
 
 if (!isset($_GET['send_image']) || $_GET['send_image'] == 1) {
     header('Content-Type: image/gif');
+} else {
+    // The request data echoed below is plain text, so say so explicitly.
+    header('Content-Type: text/plain; charset=utf-8');
 }
+header('X-Content-Type-Options: nosniff');
 
 if (isset($_GET['status'])) {
     http_response_code($_GET['status']);

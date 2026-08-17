@@ -30,13 +30,39 @@ In your Matomo server:
 
 You need to install the proxy on the server where your websites are hosted. You can do it both ways:
 
-- download the files manually
-- or install the whole repository with git
+- download the source archive (recommended)
+- or download the individual files manually
+
+| :warning:        Install from the archive, not with `git clone`   |
+|-----------------------------------------|
+| A clone of this repository contains more than the proxy: it also contains the test suite, the CI configuration and other development files, none of which belong in a public web root. The source archive contains only the files the proxy needs, so use it to install. If your existing installation contains a `tests/` directory — because it was cloned, or extracted from an older archive — remove `tests/`, `.github/`, `.git/`, `vendor/` and `composer.lock` from it, or reinstall from the archive. |
 
 
 | :zap:        Important note about where to install the proxy   |
 |-----------------------------------------|
 | To ensure the highest data accuracy possible, and that your Matomo cookies are set correctly, please install the proxy in your main website domain name and  web server. This proxy should be ideally installed on your webserver directly under `{site_to_be_tracked}`. If you installed the proxy in a sub-domain under `analytics.{site_to_be_tracked}` then this would cause data to be less accurate. (Why? because if the sub-domain `analytics.{site_to_be_tracked}` was to resolve to a CNAME that does _not_ match `{site_to_be_tracked}` OR if it was to resolve to A/AAAA addresses that do not match the first half of the A/AAAA addresses running `{site_to_be_tracked}`, then the cookies set by the Matomo Tracker Proxy in the response would only have a lifetime of maximum 7 days on Safari >= 16.4.) |
+
+#### Download the source archive (recommended)
+
+Download the archive into the directory you want to serve the proxy from, for example `matomo/` in your website root directory, so that the proxy ends up at `http://{site_to_be_tracked}/matomo/matomo.php`:
+
+```bash
+cd /path/to/your/website-root
+mkdir matomo
+cd matomo
+curl -L https://github.com/matomo-org/tracker-proxy/archive/refs/heads/master.tar.gz | tar xz --strip-components=1
+cp config.php.example config.php
+```
+
+Then change the configuration in the newly created `config.php`:
+
+- `$MATOMO_URL` should contain the URL to your Matomo server
+- `$PROXY_URL` should contain the URL to the tracker-proxy server
+- `$TOKEN_AUTH` should contain the `token_auth`
+
+To update later, run the same `curl … | tar xz` command again in the same directory. Your `config.php` is not part of the archive and is therefore left untouched. Note that extracting over an existing installation only adds and overwrites files, it never deletes them: to be sure you end up with exactly the current set of files, extract into an empty directory instead and move your `config.php` over.
+
+Be aware that with this method, `matomo.php` and other files are in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step. Extract the archive directly into your website root directory instead if you prefer the proxy at `http://{site_to_be_tracked}/matomo.php`.
 
 #### Manual download of `matomo.php`
 
@@ -46,19 +72,6 @@ You need to install the proxy on the server where your websites are hosted. You 
     - `$MATOMO_URL` should contain the URL to your Matomo server
     - `$PROXY_URL` should contain the URL to the tracker-proxy server
     - `$TOKEN_AUTH` should contain the `token_auth`
-
-#### With git
-
-- clone the repository: `git clone https://github.com/matomo-org/tracker-proxy.git matomo` into your website root directory (for example at `http://{site_to_be_tracked}/matomo/matomo.php`)
-- copy the configuration template: `cp config.php.example config.php`
-- change the configuration in the newly created `config.php`:
-    - `$MATOMO_URL` should contain the URL to your Matomo server
-    - `$PROXY_URL` should contain the URL to the tracker-proxy server
-    - `$TOKEN_AUTH` should contain the `token_auth`
-
-By using git you will later be able to update by simply running `git pull`.
-
-Be aware that with this method, `matomo.php` and other files are in a `matomo/` subdirectory. Keep that in mind when applying the instructions for the next step.
 
 ### 3. Use the proxy in the Javascript tracker
 
@@ -85,7 +98,7 @@ To achieve this, change the Matomo Javascript Code that is in the footer of your
     What has changed in this code snippet compared to the normal Matomo code?
 
     - any reference(s) to the secret Matomo URL are now replaced by your website URL (the proxy).
-    - `matomo.js` becomes `matomo.php` (or `matomo/matomo.php` if you used the *git* method): matomo.php is the proxy script
+    - `matomo.js` becomes `matomo.php` (or `matomo/matomo.php` if you installed the proxy into a `matomo/` subdirectory): matomo.php is the proxy script
     - make sure to replace `tracked-site-id-here` with your idsite
     - if the `<noscript>` is present in your tracking code, you can remove it (it contains the secret Matomo URL which you want to hide)
 
@@ -199,6 +212,16 @@ Some tracking parameters (`cip`, `cdt`, `cdo`, `country`, `region`, `city`, `lat
 
 If you have found a bug, you are welcome to submit a pull request.
 
+### Working on the proxy
+
+To work on the proxy, clone the repository:
+
+```bash
+git clone https://github.com/matomo-org/tracker-proxy.git
+```
+
+> ⚠️ **A clone is a development checkout, not an installation.** Alongside the proxy it contains the test suite and other development files, so only serve a clone from a local development web server, never from a publicly reachable web root. To install the proxy on a live site, use the [source archive](#download-the-source-archive-recommended).
+
 ### Running the tests
 
 Before running the tests, create a config.php file w/ the following contents in the root repository directory:
@@ -234,6 +257,11 @@ if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST'])) {
 // Exercise misconfiguration handling (a non-array $COOKIE_ALLOWLIST).
 if ($isTestServer && isset($_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'])) {
     $COOKIE_ALLOWLIST = $_SERVER['HTTP_X_TEST_COOKIE_ALLOWLIST_INVALID'];
+}
+
+// Exercise the test server's refusal to run for anything but a test configuration.
+if ($isTestServer && !empty($_SERVER['HTTP_X_TEST_NON_TEST_CONFIG'])) {
+    $MATOMO_URL = 'https://matomo.example.org/matomo/';
 }
 ```
 
