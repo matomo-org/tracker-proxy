@@ -10,6 +10,14 @@
 // This URL will never be revealed to visitors or search engines.
 $MATOMO_URL = 'http://your-matomo-domain.example.org/matomo/';
 
+$MATOMO_TRUSTED_URLS = [
+    // Edit the lines below, and replace http://your-matomo-domain.example.org/matomo/
+    // with your Matomo URL ending with a slash.
+    // Also add any other trusted_hosts[] - config you have in config/config.ini.php
+    // These URLs will never be revealed to visitors or search engines using the tag manager.
+    'http://your-matomo-domain.example.org/matomo/'
+];
+
 // Edit the line below and replace http://your-tracker-proxy.org/ with the URL to your tracker-proxy
 // setup. This URL will be used in Matomo output that contains the Matomo URL, so your Matomo is effectively
 // hidden.
