@@ -8,7 +8,8 @@ permissions:
 jobs:
   build:
     name: PHPUnit
-    runs-on: ubuntu-latest
+    # the ondrej PHP PPA the Apache action installs mod_php from has no packages for newer Ubuntu releases yet
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         php-version: ['7.2','7.3','7.4','8.0','8.1','8.4']
