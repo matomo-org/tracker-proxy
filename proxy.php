@@ -402,12 +402,10 @@ function getHttpContentAndStatus($url, $timeout, $user_agent, $postBody = '')
             'user_agent' => $user_agent,
             'header'     => $header,
             'timeout'    => $timeout,
+            // keep the body of an error response, eg the tracking image Matomo sends with a 4xx or 5xx
+            'ignore_errors' => true,
         ),
     );
-
-    if ($DEBUG_PROXY) {
-        $stream_options['http']['ignore_errors'] = true;
-    }
 
     if ($NO_VERIFY_SSL) {
         $stream_options['ssl'] = array(
