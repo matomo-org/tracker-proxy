@@ -115,7 +115,7 @@ RESPONSE;
      */
     public function get_return_matomoJs_without_error_when_server_down()
     {
-        $matomoUrl = $this->getMatomoUrl();
+        $matomoUrl = $this->getProxyRequestUrl();
 
         // Remove config file -> matomo.php will use the default value 'http://your-matomo-domain.example.org/matomo/'
         rename(__DIR__ . '/../config.php', __DIR__ . '/../config.php.save');
@@ -1990,7 +1990,7 @@ RESPONSE;
                           $method = 'GET', $body = null, $forceIpV6 = false)
     {
         if(is_null($matomoUrl)) {
-            $matomoUrl = $this->getMatomoUrl();
+            $matomoUrl = $this->getProxyRequestUrl();
         }
 
         $client = new Client([
@@ -2033,7 +2033,7 @@ RESPONSE;
         return $response;
     }
 
-    private function getMatomoUrl()
+    private function getProxyRequestUrl()
     {
         $pathConfig = "./config.php";
         if(!file_exists($pathConfig)) {
@@ -2050,8 +2050,7 @@ RESPONSE;
 ");
         }
         require $pathConfig;
-        $MATOMO_URL = str_replace('/tests/server/', '', $MATOMO_URL);
-        return $MATOMO_URL;
+        return $TEST_PROXY_URL ?? str_replace('/tests/server/', '', $MATOMO_URL);
     }
 
     private function getProxyUrl()
