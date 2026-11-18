@@ -99,6 +99,20 @@ RESPONSE;
     /**
      * @test
      */
+    public function error_should_forward_the_response_body()
+    {
+        // Matomo answers a failed tracking request with an error status and still sends the tracking
+        // image, so a tracking pixel doesn't show a broken image
+        $response = $this->send('status=400');
+
+        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertEquals('image/gif', $response->getHeaderLine('content-type'));
+        $this->assertStringContainsString("'status' => '400'", $response->getBody()->getContents());
+    }
+
+    /**
+     * @test
+     */
     public function get_return_matomoJs_without_error_when_server_down()
     {
         $matomoUrl = $this->getProxyRequestUrl();
