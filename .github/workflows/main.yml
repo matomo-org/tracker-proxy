@@ -10,8 +10,9 @@ jobs:
     name: PHPUnit
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        php-version: ['7.2','7.3','7.4','8.0','8.1','8.4']
+        php-version: ['7.2', '7.3', '7.4', '8.0', '8.1', '8.4', '8.5', '8.6']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,17 +20,20 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-      - name: Update package lists
-        run: sudo apt-get update
-      - name: Setup Apache
-        uses: thunder/apache-shiva-php-action@81bccd449b62dcf7dae2b33a21749fceeb2401e8
-        with:
-          php-version: '${{ matrix.php-version }}'
-          site-directory: ${{ github.workspace }}
-          http-port: 8080
       - name: Copy config file
         run: cp .github/config.php config.php
       - name: Composer install
         run: composer install
       - name: PHPUnit / PHP ${{ matrix.php-version }}
-        run: composer test
+        run: |
+          # The proxy calls the mock Matomo server while handling a request.
+          php -S '[::1]:8080' &
+          proxy_pid=$!
+          php -S 127.0.0.1:8081 &
+          upstream_pid=$!
+          trap 'kill "$proxy_pid" "$upstream_pid" 2>/dev/null || true' EXIT
+          for url in 'http://[::1]:8080' 'http://127.0.0.1:8081'; do
+            curl --silent --show-error --fail --retry 5 --retry-connrefused \
+              --output /dev/null "$url/tests/server/matomo.js"
+          done
+          composer test
